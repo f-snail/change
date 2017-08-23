@@ -668,6 +668,16 @@ Location CodeGeneratorARM64::AllocateFreeRegister(Primitive::Type type) const {
 size_t CodeGeneratorARM64::SaveCoreRegister(size_t stack_index, uint32_t reg_id) {
   Register reg = Register(VIXLRegCodeFromART(reg_id), kXRegSize);
   __ Str(reg, MemOperand(sp, stack_index));
+
+  //Taint register -> stack
+  Register taint_str = Register::XRegisterFromCode(taint_code1);
+  unsigned in_code = reg_id;
+
+  UseScratchRegisterScope temps(GetVIXLAssembler());
+  Register temp = temps.AcquireW();
+  __ Ubfm(Register::XRegFromCode(temp.code()), taint_str, in_code * 2, (in_code * 2 + 1));
+  __ Str(temp, MemOperand(sp, stack_index + 1));
+  //Taint end
   return kArm64WordSize;
 }
 
@@ -763,6 +773,7 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
 
     //Taint
     unsigned out_code = dst.code();
+	DCHECK(out_code != 63);
 	unsigned immr_bfm = 64 - 2 * out_code;
     unsigned imms_bfm = 1;
 
@@ -795,6 +806,7 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
         //Taint
 		UseScratchRegisterScope temps(GetVIXLAssembler());
         in_code = RegisterFrom(source, type).code();
+		DCHECK(in_code != 63);//not supposed to be vixl::sp,in vixl,the code of SP is 63.
         temps.Exclude(Register(dst), RegisterFrom(source, type));
         Register temp = temps.AcquireX();
         __ Bfm(taint_str1, xzr, immr_bfm, imms_bfm);
@@ -807,6 +819,7 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
         //Taint
         UseScratchRegisterScope temps(GetVIXLAssembler());
 		in_code = FPRegisterFrom(source, type).code();
+		DCHECK(in_code != 63);
         Register temp = temps.AcquireX();
 		__ Bfm(taint_str2, xzr, immr_bfm, imms_bfm);
         __ Ubfm(temp, taint_str2, in_code * 2, (in_code * 2 + 1));
@@ -832,6 +845,7 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
 	  UseScratchRegisterScope temps(GetVIXLAssembler());
 	  Register temp = temps.AcquireX();
 	  in_code = source.code();
+	  DCHECK(in_code != 63);
 	  unsigned immr_bfm = 64 - 2 * in_code;
 	  unsigned imms_bfm = 1;
 
@@ -892,6 +906,7 @@ void CodeGeneratorARM64::Load(Primitive::Type type,
 	temps.Exclude(dst, obj);
 	unsigned out_code = dst.code();
 	unsigned in_code = obj.code();
+	DCHECK(in_code != 63 && out_code != 63);
 	Register temp = temps.AcquireX();
 	//Taint
 
@@ -970,6 +985,7 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
   Register src_r = src.base();
   unsigned out_code = dst.code();
   unsigned in_code = src_r.code();
+  DCHECK(in_code != 63 && out_code != 63);
 
   switch (type) {
     case Primitive::kPrimBoolean:
@@ -1054,6 +1070,7 @@ void CodeGeneratorARM64::Store(Primitive::Type type,
 	temps.Exclude(obj, src);
 	unsigned out_code = obj.code();
 	unsigned in_code = src.code();
+	DCHECK(in_code != 63 && out_code != 63);
 	Register temp = temps.AcquireX();
 	//Taint
 
@@ -1117,6 +1134,7 @@ void CodeGeneratorARM64::StoreRelease(Primitive::Type type,
   Register taint_str2 = Register::XRegisterFromCode(taint_code2);
   unsigned in_code = src.code();
   unsigned out_code = dst.base().code();
+  DCHECK(in_code != 63 && out_code != 63);
   
   switch (type) {
     case Primitive::kPrimBoolean:
@@ -1432,10 +1450,12 @@ void InstructionCodeGeneratorARM64::HandleBinaryOp(HBinaryOperation* instr) {
       Register taint_str = Register::XRegisterFromCode(taint_code1);
       unsigned out_code = dst.code();
       unsigned in_code0 = lhs.code();
+	  DCHECK(in_code0 != 63 && out_code != 63);
       unsigned in_code1;
       if(rhs.IsShiftedRegister() || rhs.IsExtendedRegister()){
               Register rin = rhs.reg();
               in_code1 = rin.code();
+			  DCHECK(in_code1 != 63);
               temps.Exclude(dst, lhs, rin);
       }else{
               in_code1 = -1;
@@ -1487,6 +1507,7 @@ void InstructionCodeGeneratorARM64::HandleBinaryOp(HBinaryOperation* instr) {
       unsigned out_code = dst.code();
       unsigned in_code0 = lhs.code();
       unsigned in_code1 = rhs.code();
+	  DCHECK(in_code0 != 63 && in_code1 != 63 && out_code != 63);
 
       temps.Exclude(dst, lhs, rhs);
       Register temp1 = temps.AcquireX();
@@ -1553,6 +1574,7 @@ void InstructionCodeGeneratorARM64::HandleShift(HBinaryOperation* instr) {
       Register taint_str = Register::XRegisterFromCode(taint_code1);
       unsigned out_code = dst.code();
       unsigned in_code0 = lhs.code();
+	  DCHECK(in_code0 != 63 && out_code != 63);
       temps.Exclude(dst, lhs);
 
       if (rhs.IsImmediate()) {
@@ -1587,6 +1609,7 @@ void InstructionCodeGeneratorARM64::HandleShift(HBinaryOperation* instr) {
 
         //Taint
         unsigned in_code1 = rhs_reg.code();
+		DCHECK(in_code1 != 63);
         temps.Exclude(rhs_reg);
         Register temp1 = temps.AcquireX();
         Register temp2 = temps.AcquireX();
@@ -1669,6 +1692,8 @@ void InstructionCodeGeneratorARM64::VisitArrayGet(HArrayGet* instruction) {
 	unsigned in_code0 = obj.code();
 	unsigned in_code1 = index_reg.code();
 	unsigned out_code = temp.code();
+	DCHECK(in_code0 != 63 && in_code1 != 63 && out_code != 63);
+
 	vixl::Label exe,exit;
 	__ Bfm(taint_str1, xzr, 64 - 2 * out_code, 1);
 	__ Ubfm(temp1, taint_str1, in_code0 * 2, (in_code0 * 2 + 1));
@@ -1761,6 +1786,8 @@ void InstructionCodeGeneratorARM64::VisitArraySet(HArraySet* instruction) {
 		unsigned out_code = obj.code();
 		unsigned in_code0 = temp.code();
 		unsigned in_code1 = index_reg.code();
+		DCHECK(in_code0 != 63 && in_code1 != 63 && out_code != 63);
+
 		Register temp1 = temps.AcquireX();
 		Register temp2 = temps.AcquireX();
 		vixl::Label exe,exit;
@@ -2009,6 +2036,7 @@ void InstructionCodeGeneratorARM64::VisitDiv(HDiv* div) {
 	  out_code = dst.code();
 	  in_code0 = rhs.code();
 	  in_code1 = lhs.code();
+	  DCHECK(in_code0 != 63 && in_code1 != 63 && out_code != 63);
 
 	  unsigned immr_bfm = 64 - 2 * out_code;
       unsigned imms_bfm = 1;
@@ -2043,6 +2071,7 @@ void InstructionCodeGeneratorARM64::VisitDiv(HDiv* div) {
 	  out_code = dst.code();
 	  in_code0 = rhs.code();
 	  in_code1 = lhs.code();
+	  DCHECK(in_code0 != 63 && in_code1 != 63 && out_code != 63);
 
 	  unsigned immr_bfm = 64 - 2 * out_code;
 	  unsigned imms_bfm = 1;
@@ -2665,6 +2694,7 @@ void InstructionCodeGeneratorARM64::VisitMul(HMul* mul) {
 	  out_code = dst.code();
 	  in_code0 = rhs.code();
 	  in_code1 = lhs.code();
+	  DCHECK(in_code0 != 63 && in_code1 != 63 && out_code != 63);
 
 	  unsigned immr_bfm = 64 - 2 * out_code;
 	  unsigned imms_bfm = 1; 
@@ -2699,6 +2729,7 @@ void InstructionCodeGeneratorARM64::VisitMul(HMul* mul) {
 	  out_code = dst.code();
 	  in_code0 = rhs.code();
 	  in_code1 = lhs.code();
+	  DCHECK(in_code0 != 63 && in_code1 != 63 && out_code != 63);
 
 	  unsigned immr_bfm = 64 - 2 * out_code;
 	  unsigned imms_bfm = 1; 
@@ -2761,10 +2792,13 @@ void InstructionCodeGeneratorARM64::VisitNeg(HNeg* neg) {
 	  /*Taint begin*/
 	  Register taint_str = Register::XRegisterFromCode(taint_code1);
       unsigned out_code = dst.code();//the code of sp is 63,but it's not supposed to use sp here.
-      temps.Exclude(dst);// exclude the register of output.
+      DCHECK(out_code != 63);
+
+	  temps.Exclude(dst);// exclude the register of output.
       if(rhs.IsShiftedRegister() || rhs.IsExtendedRegister()){
 		  Register rin = rhs.reg();
 		  unsigned in_code = rin.code();
+		  DCHECK(in_code != 63);
 		  temps.Exclude(rin);
 
 		  unsigned immr_bfm = 64 - 2 * out_code;
@@ -2790,6 +2824,7 @@ void InstructionCodeGeneratorARM64::VisitNeg(HNeg* neg) {
 
       unsigned fout_code = dst.code();//the code of sp is 63,but it's not supposed to use sp here.
       unsigned fin_code = rhs.code();
+	  DCHECK(fin_code != 63 && fout_code != 63);
       Register ftemp = temps.AcquireX();//request for a 64-bit xRegister to store the higher 64 bits of taint_str.
 
       /*get the taint bits of input_register in q16(ftemp1)*/
@@ -2888,6 +2923,7 @@ void InstructionCodeGeneratorARM64::VisitNot(HNot* instruction) {
 			  Register in = sr.reg();
               unsigned out_code = dst.code();
               unsigned in_code = in.code();
+			  DCHECK(in_code != 63 && out_code != 63);
               Register temp = temps.AcquireX();
 
               unsigned immr_bfm = 64 - 2 * out_code;
@@ -2923,6 +2959,7 @@ void InstructionCodeGeneratorARM64::VisitBooleanNot(HBooleanNot* instruction) {
         Register taint_str = Register::XRegisterFromCode(taint_code1);
         unsigned out_code = dst.code();
         unsigned in_code = rhs.code();
+		DCHECK(in_code != 63 && out_code != 63);
 
         Register temp = temps.AcquireX();
         //BFM clear bits.

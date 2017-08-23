@@ -871,7 +871,13 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
       FPRegister temp = destination.IsDoubleStackSlot() ? temps.AcquireD() : temps.AcquireS();
       __ Ldr(temp, StackOperandFrom(source));
       __ Str(temp, StackOperandFrom(destination));
-    }
+
+	  //Taint begin
+	  Register temp1 = temps.AcquireW();
+	  __ Ldr(temp1, MemOperand(vixl::sp, source.GetStackIndex() + 1));
+	  __ Str(temp1, MemOperand(vixl::sp, destination.GetStackIndex() + 1));
+	  //Taint end
+	}
   }
 }
 

@@ -186,17 +186,28 @@ static void AddTaintToTarget(LocationSummary* locations, bool isFloat, vixl::Mac
 	}
 }
 
-//addTaint
-void IntrinsicCodeGeneratorARM64::VisitTaintAddTaint(HInvoke* invoke){
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintI(HInvoke* invoke){
      vixl::MacroAssembler* masm = GetVIXLAssembler();
      LocationSummary* locations = invoke->GetLocations();
 
-
-	 AddTaintToTarget(locations, isFloat, )
+	 AddTaintToTarget(locations, false, GetVIXLAssembler());
 }
 
-void IntrinsicLocationsBuilderARM64::VisitTaintAddTaint(HInvoke* invoke) {
-     CreateTptIntToVoidLocations(arena_, invoke);
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintF(HInvoke* invoke){
+	vixl::MacroAssembler* masm = GetVIXLAssembler();
+	LocationSummary* locations = invoke->GetLocations();
+
+	AddTaintToTarget(locations, true, GetVIXLAssembler());
+}
+
+//location part: add taint to integral data.
+//TODO:need to change the java part.
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintI(HInvoke* invoke) {
+	CreateTIIntToVoidLocations(arena_, invoke);
+}
+//add taint to floating-point data.
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintF(HInvoke* invoke){
+	CreateTFIntToVoidLocations(arena_, invoke);
 }
 
 //GetTaint

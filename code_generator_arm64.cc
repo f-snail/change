@@ -543,6 +543,9 @@ void CodeGeneratorARM64::Move(HInstruction* instruction,
   Primitive::Type type = instruction->GetType();
   DCHECK_NE(type, Primitive::kPrimVoid);
 
+  Register taint_str1 = Register::XRegisterFromCode(taint_code1);
+  Register taint_str2 = Register::XRegisterFromCode(taint_code2);
+
   if (instruction->IsIntConstant()
       || instruction->IsLongConstant()
       || instruction->IsNullConstant()) {
@@ -552,6 +555,12 @@ void CodeGeneratorARM64::Move(HInstruction* instruction,
       DCHECK(((instruction->IsIntConstant() || instruction->IsNullConstant()) && dst.Is32Bits()) ||
              (instruction->IsLongConstant() && dst.Is64Bits()));
       __ Mov(dst, value);
+	  //Taint , clear taint
+	  unsigned out_code = dst.code();
+	  unsigned immr_bfm = 64 - 2 * out_code;
+	  unsigned imms_bfm = 1;
+	  __ Bfm(taint_str1, xzr, immr_bfm, imms_bfm);
+	  //Taint end.
     } else {
       DCHECK(location.IsStackSlot() || location.IsDoubleStackSlot());
       UseScratchRegisterScope temps(GetVIXLAssembler());
@@ -560,9 +569,11 @@ void CodeGeneratorARM64::Move(HInstruction* instruction,
           : temps.AcquireX();
       __ Mov(temp, value);
       __ Str(temp, StackOperandFrom(location));
+	  //no need to change taint condition.
     }
   } else if (instruction->IsTemporary()) {
     Location temp_location = GetTemporaryLocation(instruction->AsTemporary());
+	//The taint propagation is in function MoveLocation(...)
     MoveLocation(location, temp_location, type);
   } else if (instruction->IsLoadLocal()) {
     uint32_t stack_slot = GetStackSlot(instruction->AsLoadLocal()->GetLocal());
@@ -708,17 +719,36 @@ void CodeGeneratorARM64::DumpFloatingPointRegister(std::ostream& stream, int reg
 }
 
 void CodeGeneratorARM64::MoveConstant(CPURegister destination, HConstant* constant) {
-  if (constant->IsIntConstant()) {
-    __ Mov(Register(destination), constant->AsIntConstant()->GetValue());
-  } else if (constant->IsLongConstant()) {
-    __ Mov(Register(destination), constant->AsLongConstant()->GetValue());
-  } else if (constant->IsNullConstant()) {
-    __ Mov(Register(destination), 0);
-  } else if (constant->IsFloatConstant()) {
-    __ Fmov(FPRegister(destination), constant->AsFloatConstant()->GetValue());
-  } else {
-    DCHECK(constant->IsDoubleConstant());
-    __ Fmov(FPRegister(destination), constant->AsDoubleConstant()->GetValue());
+  
+	//Taint variable
+	Register taint_str1 = Register::XRegisterFromCode(taint_code1);
+	Register taint_str2 = Register::XRegisterFromCode(taint_code2);
+	int out_code = destination.code();
+	unsigned immr_bfm = 64 - 2 * out_code;
+	unsigned imms_bfm = 1;
+
+	if(constant->IsIntConstant() || constant->IsLongConstant() || constant->IsNullConstant()){
+		if (constant->IsIntConstant()) {
+			__ Mov(Register(destination), constant->AsIntConstant()->GetValue());
+		} else if (constant->IsLongConstant()) {
+			__ Mov(Register(destination), constant->AsLongConstant()->GetValue());
+		} else if (constant->IsNullConstant()) {
+			__ Mov(Register(destination), 0);
+		}
+
+		//Move a constant into the register,so clear the taint bit in taint_str.
+		__ Bfm(taint_str1, xzr, immr_bfm, imms_bfm);
+		//Taint part1 end
+  } else if(constant->IsFloatConstant() || constant->IsDoubleConstant()){ 
+	  if (constant->IsFloatConstant()) {
+		  __ Fmov(FPRegister(destination), constant->AsFloatConstant()->GetValue());
+	  } else {
+		  DCHECK(constant->IsDoubleConstant());
+		  __ Fmov(FPRegister(destination), constant->AsDoubleConstant()->GetValue());
+	  }
+
+	  //Taint
+	  __ Bfm(taint_str2, xzr, immr_bfm, imms_bfm);
   }
 }
 

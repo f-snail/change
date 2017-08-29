@@ -691,8 +691,9 @@ void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
 	  ___ Stp(dst, temp, MemOperand(sp, offset));
 	  cfi_.RelOffset(DWARFReg(dst), offset);
 	  cfi_.RelOffset(DWARFReg(temp), offset + size);//offset need to be changed.
-	  offset += size + ?;
-	  //here ? represent the size of temp,it should be 32 bits - 4 bytes.but now it's not sure what size means.
+	  offset += size + 4;
+	  //here 4 represent the size of temp,it should be 32 bits - 4 bytes.
+	  //which means that taint just occupies one stack slot.
   }
   /*Taint end*/
   DCHECK(registers.IsEmpty());

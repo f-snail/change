@@ -472,6 +472,10 @@ void ParallelMoveResolverNoSwap::PerformMove(size_t index) {
     DeletePendingMove(pending_move);
     move->SetSource(pending_source);
     move->SetDestination(pending_destination);
+    /*  Taint
+     *  In the function EmitMove(...),it calls the function MoveLocation in code_generator.
+     *  the taint logic is in the function MoveLocation(...).
+     */
     EmitMove(index);
     move->Eliminate();
     UpdateMoveSource(pending_source, pending_destination);

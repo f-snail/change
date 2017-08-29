@@ -489,6 +489,7 @@ void CodeGeneratorARM64::GenerateFrameEntry() {
     UseScratchRegisterScope temps(masm);
     Register temp = temps.AcquireX();
     DCHECK(GetCompilerOptions().GetImplicitStackOverflowChecks());
+    //GetStackOverflowReservedBytes(kArm64) = 8 * KB.
     __ Sub(temp, sp, static_cast<int32_t>(GetStackOverflowReservedBytes(kArm64)));
     __ Ldr(wzr, MemOperand(temp, 0));
     RecordPcInfo(nullptr, 0);
@@ -502,6 +503,7 @@ void CodeGeneratorARM64::GenerateFrameEntry() {
     //      ...                       : other preserved fp registers.
     //      ...                       : reserved frame space.
     //      sp[0]                     : current method.
+    //kArtMethodRegister = vixl::x0
     __ Str(kArtMethodRegister, MemOperand(sp, -frame_size, PreIndex));
     GetAssembler()->cfi().AdjustCFAOffset(frame_size);
     GetAssembler()->SpillRegisters(GetFramePreservedCoreRegisters(),

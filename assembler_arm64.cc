@@ -652,6 +652,7 @@ static inline dwarf::Reg DWARFReg(CPURegister reg) {
 void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
   int size = registers.RegisterSizeInBytes();
   const Register sp = vixl_masm_->StackPointer();
+  /*original version
   while (registers.Count() >= 2) {
     const CPURegister& dst0 = registers.PopLowestIndex();
     const CPURegister& dst1 = registers.PopLowestIndex();
@@ -666,6 +667,34 @@ void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
     ___ Str(dst0, MemOperand(sp, offset));
     cfi_.RelOffset(DWARFReg(dst0), offset);
   }
+  */
+
+  /*Taint version
+   *move the taint of the spilled register to stack as well, just near the stack that stores spilled register.
+   */
+  while(!registers.IsEmpty()){
+	  const CPURegister& dst = registers.PopLowestIndex();
+	  unsigned out_code = dst.code();
+	  UseScratchRegisterScope temps(GetVIXLAssembler());
+	  Register temp = temps.AcquireW();
+	  Register taint_str1 = Register::XRegisterFromCode(taint_code1);
+	  Register taint_str2 = Register::XRegisterFromCode(taint_code2);
+	  unsigned immr_bfm = 64 - 2 * out_code;
+	  unsigned imms_bfm = 1;
+	  unsigned t_code = temp.code();//the register number of temp.
+
+	  if(dst.IsRegister()){
+		  __ Ubfm(Register::XRegFromCode(t_code), taint_str1, out_code * 2, (out_code * 2 + 1));
+	  }else if(dst.IsFpuRegister()){
+		  __ Ubfm(Register::XRegFromCode(t_code), taint_str2, out_code * 2, (out_code * 2 + 1));
+	  }
+	  ___ Stp(dst, temp, MemOperand(sp, offset));
+	  cfi_.RelOffset(DWARFReg(dst), offset);
+	  cfi_.RelOffset(DWARFReg(temp), offset + size);//offset need to be changed.
+	  offset += size + ?;
+	  //here ? represent the size of temp,it should be 32 bits - 4 bytes.but now it's not sure what size means.
+  }
+  /*Taint end*/
   DCHECK(registers.IsEmpty());
 }
 

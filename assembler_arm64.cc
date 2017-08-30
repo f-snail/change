@@ -702,6 +702,7 @@ void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
 void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
   int size = registers.RegisterSizeInBytes();
   const Register sp = vixl_masm_->StackPointer();
+  /* original version
   while (registers.Count() >= 2) {
     const CPURegister& dst0 = registers.PopLowestIndex();
     const CPURegister& dst1 = registers.PopLowestIndex();
@@ -715,6 +716,36 @@ void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
     ___ Ldr(dst0, MemOperand(sp, offset));
     cfi_.Restore(DWARFReg(dst0));
   }
+  */
+  /*Taint version
+   *move the taint from memory to taint_str register.
+   */
+  while(!registers.IsEmpty())
+  {
+	  const CPURegister& dst = registers.PopLowestIndex();
+	  unsigned out_code = dst.code();
+	  UseScratchRegisterScope temps(GetVIXLAssembler());
+	  Register temp = temps.AcquireW();
+	  Register taint_str1 = Register::XRegisterFromCode(taint_code1);
+	  Register taint_str2 = Register::XRegisterFromCode(taint_code2);
+	  unsigned t_code = temp.code();//the register number of temp.
+
+	  unsigned immr_bfm = 64 - 2 * out_code;
+	  unsigned imms_bfm = 1;
+	  __ Ldp(dst, temp, MemOperand(sp, offset));
+	  if(dst.IsRegister())
+	  {
+		  __ Bfm(taint_str1, xzr, immr_bfm, imms_bfm);
+		  __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+	  }else if(dst.IsFpuRegister()){
+		  __ Bfm(taint_str2, xzr, immr_bfm, imms_bfm);
+		  __ Orr(taint_str2, taint_str2, Operand(temp, LSL, 2 * out_code));
+	  }
+	  cfi_.Restore(DWARFReg(dst));
+	  //cfi_.Restore(DWARFReg(temp)); there is no need for temp to generate cfi instruction.
+	  offset = size + 4;
+  }
+  //Taint end.
   DCHECK(registers.IsEmpty());
 }
 

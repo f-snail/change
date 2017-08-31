@@ -68,11 +68,20 @@ class RegisterAllocator {
 
   static bool CanAllocateRegistersFor(const HGraph& graph, InstructionSet instruction_set);
 
+  /*Taint version, double the number of spill slots to store the taint of spilled registers.*/
   size_t GetNumberOfSpillSlots() const {
-    return int_spill_slots_.Size()
+    /* original version
+	  return int_spill_slots_.Size()
         + long_spill_slots_.Size()
         + float_spill_slots_.Size()
         + double_spill_slots_.Size();
+	*/
+	  return 2 * (
+				  int_spill_slots_.Size()
+				  + long_spill_slots_.Size()
+				  + float_spill_slots_.Size()
+				  + double_spill_slots_.Size()
+				 );
   }
 
   static constexpr const char* kRegisterAllocatorPassName = "register";

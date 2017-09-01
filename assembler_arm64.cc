@@ -749,6 +749,7 @@ void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
   DCHECK(registers.IsEmpty());
 }
 
+// Emit code that will create an activation on the stack.
 void Arm64Assembler::BuildFrame(size_t frame_size, ManagedRegister method_reg,
                                 const std::vector<ManagedRegister>& callee_save_regs,
                                 const ManagedRegisterEntrySpills& entry_spills) {
@@ -770,11 +771,23 @@ void Arm64Assembler::BuildFrame(size_t frame_size, ManagedRegister method_reg,
   // Increase frame to required size.
   DCHECK_ALIGNED(frame_size, kStackAlignment);
   DCHECK_GE(frame_size, core_reg_size + fp_reg_size + kArm64PointerSize);
-  IncreaseFrameSize(frame_size);
+  /*Taint, change frame size. add the taint stack slot. 
+   *1 ?? not sure if the number of stack slots that after Method* should be 1.
+   */
+  //IncreaseFrameSize(frame_size);
+  unsigned core_reg_num = core_reg_list.Count();
+  unsigned fp_reg_num = fp_reg_list.Count();
+  IncreaseFrameSize(frame_size + 4 * (core_reg_num + fp_reg_num /*+ 1*/));
+  frame_size = frame_size + 4 * (core_reg_num + fp_reg_num);
 
   // Save callee-saves.
-  SpillRegisters(core_reg_list, frame_size - core_reg_size);
-  SpillRegisters(fp_reg_list, frame_size - core_reg_size - fp_reg_size);
+  /*Taint
+   * change the offset to be (core_reg_num * 4 + (frame_size - core_reg_size)). 4 represents the size of a stack slot.
+   */
+  size_t core_offset = frame_size - core_reg_size - 4 * core_reg_num;
+  size_t fp_offset = frame_size - core_reg_size - fp_reg_size - 4 * (core_reg_num + fp_reg_num);
+  SpillRegisters(core_reg_list, /* frame_size - core_reg_size*/ core_offset);
+  SpillRegisters(fp_reg_list, /*frame_size - core_reg_size - fp_reg_size*/ fp_offset);
 
   // Note: This is specific to JNI method frame.
   // We will need to move TR(Caller saved in AAPCS) to ETR(Callee saved in AAPCS). The original
@@ -788,25 +801,34 @@ void Arm64Assembler::BuildFrame(size_t frame_size, ManagedRegister method_reg,
   StoreToOffset(X0, SP, 0);
 
   // Write out entry spills
-  int32_t offset = frame_size + kArm64PointerSize;
+  /*Taint change offset.
+   *In every if statement, add "offset += 4" 
+   */
+  //int32_t offset = frame_size + kArm64PointerSize;
+  int32_t offset = frame_size + kArm64PointerSize + 4*(core_reg_num + fp_reg_num);
   for (size_t i = 0; i < entry_spills.size(); ++i) {
     Arm64ManagedRegister reg = entry_spills.at(i).AsArm64();
     if (reg.IsNoRegister()) {
       // only increment stack offset.
       ManagedRegisterSpill spill = entry_spills.at(i);
       offset += spill.getSize();
+      offset += 4;//Taint
     } else if (reg.IsXRegister()) {
       StoreToOffset(reg.AsXRegister(), SP, offset);
       offset += 8;
+      offset += 4;//Taint
     } else if (reg.IsWRegister()) {
       StoreWToOffset(kStoreWord, reg.AsWRegister(), SP, offset);
       offset += 4;
+      offset += 4;//Taint
     } else if (reg.IsDRegister()) {
       StoreDToOffset(reg.AsDRegister(), SP, offset);
       offset += 8;
+      offset += 4;//Taint
     } else if (reg.IsSRegister()) {
       StoreSToOffset(reg.AsSRegister(), SP, offset);
       offset += 4;
+      offset += 4;//Taint
     }
   }
 }
@@ -828,6 +850,12 @@ void Arm64Assembler::RemoveFrame(size_t frame_size,
   size_t core_reg_size = core_reg_list.TotalSizeInBytes();
   size_t fp_reg_size = fp_reg_list.TotalSizeInBytes();
 
+  //Taint
+  //like BuildFrame
+  size_t core_reg_num = core_reg_list.Count();
+  size_t fp_reg_num = fp_reg_list.Count();
+  frame_size = frame_size + 4 * (core_reg_num + fp_reg_num);
+
   // For now we only check that the size of the frame is large enough to hold spills and method
   // reference.
   DCHECK_GE(frame_size, core_reg_size + fp_reg_size + kArm64PointerSize);
@@ -842,8 +870,9 @@ void Arm64Assembler::RemoveFrame(size_t frame_size,
   cfi_.RememberState();
 
   // Restore callee-saves.
-  UnspillRegisters(core_reg_list, frame_size - core_reg_size);
-  UnspillRegisters(fp_reg_list, frame_size - core_reg_size - fp_reg_size);
+  //Taint. change the offset.
+  UnspillRegisters(core_reg_list, frame_size - core_reg_size - 4 * core_reg_num);
+  UnspillRegisters(fp_reg_list, frame_size - core_reg_size - fp_reg_size - 4 * (core_reg_num + fp_reg_num));
 
   // Decrease frame size to start of callee saved regs.
   DecreaseFrameSize(frame_size);

@@ -72,6 +72,13 @@ static Primitive::Type GetType(uint64_t data, bool is_op_size) {
 
 static Intrinsics GetIntrinsic(InlineMethod method) {
   switch (method.opcode) {
+
+    //taint source and sink logic
+          case kIntrinsicAddTaint:
+                  return Intrinsics::kTaintAddTaint;
+          case kIntrinsicGetTaint:
+                  return Intrinsics::kTaintGetTaint;
+
     // Floating-point conversions.
     case kIntrinsicDoubleCvt:
       return ((method.d.data & kIntrinsicFlagToFloatingPoint) == 0) ?

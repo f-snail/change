@@ -86,7 +86,29 @@
   V(UnsafePutLong, kDirect) \
   V(UnsafePutLongOrdered, kDirect) \
   V(UnsafePutLongVolatile, kDirect) \
-  V(ReferenceGetReferent, kDirect)
-
+  V(ReferenceGetReferent, kDirect)  \
+  V(TaintAddTaintInt, kStatic)      \
+  V(TaintGetTaintInt, kStatic)      \
+  V(TaintAddTaintShort, kStatic)      \
+  V(TaintGetTaintShort, kStatic)      \
+  V(TaintAddTaintBoolean, kStatic)      \
+  V(TaintGetTaintBoolean, kStatic)      \
+  V(TaintAddTaintByte, kStatic)      \
+  V(TaintGetTaintByte, kStatic)      \
+  V(TaintGetTaintVoid, kStatic)      \
+  V(TaintAddTaintLong, kStatic)      \
+  V(TaintAddTaintIntArray, kStatic)  \
+  V(TaintGetTaintIntArray, kStatic)  \
+  V(TaintAddTaintByteArray, kStatic)  \
+  V(TaintGetTaintByteArray, kStatic)  \
+  V(TaintAddTaintShortArray, kStatic)  \
+  V(TaintGetTaintShortArray, kStatic)  \
+  V(TaintAddTaintLongArray, kStatic)  \
+  V(TaintGetTaintLongArray, kStatic)  \
+  V(TaintAddTaintBooleanArray, kStatic)  \
+  V(TaintGetTaintBooleanArray, kStatic)  \
+  V(TaintAddTaintCharArray, kStatic)  \
+  V(TaintGetTaintCharArray, kStatic)  \
+  //add Taint intrinsics function statement
 #endif  // ART_COMPILER_OPTIMIZING_INTRINSICS_LIST_H_
 #undef ART_COMPILER_OPTIMIZING_INTRINSICS_LIST_H_   // #define is only for lint.

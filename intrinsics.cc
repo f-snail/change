@@ -73,11 +73,49 @@ static Primitive::Type GetType(uint64_t data, bool is_op_size) {
 static Intrinsics GetIntrinsic(InlineMethod method) {
   switch (method.opcode) {
 
-    //taint source and sink logic
-          case kIntrinsicAddTaint:
-                  return Intrinsics::kTaintAddTaint;
-          case kIntrinsicGetTaint:
-                  return Intrinsics::kTaintGetTaint;
+    //Taint source and sink logic cases.
+          case kIntrinsicAddTaintInt:
+                  return Intrinsics::kTaintAddTaintInt;
+          case kIntrinsicGetTaintInt:
+                  return Intrinsics::kTaintGetTaintInt;
+          case kIntrinsicAddTaintShort:
+                  return Intrinsics::kTaintAddTaintShort;
+          case kIntrinsicGetTaintShort:
+                  return Intrinsics::kTaintGetTaintShort;
+          case kIntrinsicAddTaintByte:
+                  return Intrinsics::kTaintAddTaintByte;
+          case kIntrinsicGetTaintByte:
+                  return Intrinsics::kTaintGetTaintByte;
+          case kIntrinsicAddTaintBoolean:
+                  return Intrinsics::kTaintAddTaintBoolean;
+          case kIntrinsicGetTaintBoolean:
+                  return Intrinsics::kTaintGetTaintBoolean;
+          case kIntrinsicGetTaintVoid:
+                  return Intrinsics::kTaintGetTaintVoid;
+          case kIntrinsicAddTaintLong:
+                  return Intrinsics::kTaintAddTaintLong;
+          case kIntrinsicGetTaintLong:
+                  return Intrinsics::kTaintGetTaintLong;
+          case kIntrinsicAddTaintIntArray:
+                  return Intrinsics::kTaintAddTaintIntArray;
+          case kIntrinsicGetTaintIntArray:
+                  return Intrinsics::kTaintGetTaintIntArray;
+          case kIntrinsicAddTaintByteArray:
+                  return Intrinsics::kTaintAddTaintByteArray;
+          case kIntrinsicGetTaintByteArray:
+                  return Intrinsics::kTaintGetTaintByteArray;
+          case kIntrinsicAddTaintBooleanArray:
+                  return Intrinsics::kTaintAddTaintBooleanArray;
+          case kIntrinsicGetTaintBooleanArray:
+                  return Intrinsics::kTaintGetTaintBooleanArray;
+          case kIntrinsicAddTaintLongArray:
+                  return Intrinsics::kTaintAddTaintLongArray;
+          case kIntrinsicGetTaintLongArray:
+                  return Intrinsics::kTaintGetTaintLongArray;
+          case kIntrinsicAddTaintCharArray:
+                  return Intrinsics::kTaintAddTaintCharArray;
+          case kIntrinsicGetTaintCharArray:
+                  return Intrinsics::kTaintGetTaintCharArray;
 
     // Floating-point conversions.
     case kIntrinsicDoubleCvt:

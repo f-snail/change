@@ -33,7 +33,7 @@ namespace arm64 {
 class CodeGeneratorARM64;
 
 /*Taint*/
-unsigned taint_code = 16;
+//unsigned taint_code = 16;
 unsigned taint_code1 = 11;//put the taint status of Registers
 unsigned taint_code2 = 12;//put the taint status of FPRegisters
 unsigned width = 2;//the bitwise width of taint stored in register.
@@ -55,9 +55,14 @@ const vixl::Register tr = vixl::x18;                        // Thread Register
 static const vixl::Register kArtMethodRegister = vixl::x0;  // Method register on invoke.
 
 /*Taint*/
+#ifdef WITH_TAINT
 const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1, vixl::x11, vixl::x12);
-/*Taint add d16 as the taint storage register.*/
-const vixl::CPURegList vixl_reserved_fp_registers(vixl::d31,vixl::d16);
+#else
+const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vix    l::ip1);
+#endif
+
+/*Taint add d16 as the taint storage register. - REMOVED*/
+const vixl::CPURegList vixl_reserved_fp_registers(vixl::d31);
 /*Taint end*/
 
 const vixl::CPURegList runtime_reserved_core_registers(tr, vixl::lr);

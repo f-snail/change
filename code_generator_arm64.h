@@ -58,7 +58,7 @@ static const vixl::Register kArtMethodRegister = vixl::x0;  // Method register o
 #ifdef WITH_TAINT
 const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1, vixl::x11, vixl::x12);
 #else
-const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vix    l::ip1);
+const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1);
 #endif
 
 /*Taint add d16 as the taint storage register. - REMOVED*/

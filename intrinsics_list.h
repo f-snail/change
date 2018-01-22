@@ -21,8 +21,6 @@
 // to be a HInvokeStaticOrDirect node (compared to HInvokeVirtual).
 
 #define INTRINSICS_LIST(V) \
-  V(TaintAddTaint,kStatic)      \
-  V(TaintGetTaint,kStatic)      \
   V(DoubleDoubleToRawLongBits, kStatic) \
   V(DoubleLongBitsToDouble, kStatic) \
   V(FloatFloatToRawIntBits, kStatic) \
@@ -97,6 +95,7 @@
   V(TaintGetTaintByte, kStatic)      \
   V(TaintGetTaintVoid, kStatic)      \
   V(TaintAddTaintLong, kStatic)      \
+  V(TaintGetTaintLong, kStatic)      \
   V(TaintAddTaintIntArray, kStatic)  \
   V(TaintGetTaintIntArray, kStatic)  \
   V(TaintAddTaintByteArray, kStatic)  \

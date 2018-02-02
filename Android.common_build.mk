@@ -188,15 +188,17 @@ art_cflags := \
   -std=gnu++11 \
   -ggdb3 \
   -Wall \
-  -Werror \
   -Wextra \
   -Wstrict-aliasing \
   -fstrict-aliasing \
   -Wunreachable-code \
   -Wredundant-decls \
   -Wshadow \
-  -Wunused \
   -fvisibility=protected \
+#Taint begin#
+#-Werror \
+#-Wunused \
+#Taint end#
   $(art_default_gc_type_cflags)
 
 # Missing declarations: too many at the moment, as we use "extern" quite a bit.

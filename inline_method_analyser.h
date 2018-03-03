@@ -35,6 +35,10 @@ class MethodVerifier;
 }  // namespace verifier
 
 enum InlineMethodOpcode : uint16_t {
+  /*Taint*/
+  kIntrinsicAddTaint,
+  kIntrinsicGetTaint,
+  /*Taint end*/
   kIntrinsicDoubleCvt,
   kIntrinsicFloatCvt,
   kIntrinsicReverseBits,
@@ -69,6 +73,32 @@ enum InlineMethodOpcode : uint16_t {
   kIntrinsicUnsafeGet,
   kIntrinsicUnsafePut,
   kIntrinsicSystemArrayCopyCharArray,
+  
+  /*Taint*/
+  kIntrinsicAddTaintInt,
+  kIntrinsicGetTaintInt,
+  kIntrinsicAddTaintShort,
+  kIntrinsicGetTaintShort,
+  kIntrinsicAddTaintBoolean,
+  kIntrinsicGetTaintBoolean,
+  kIntrinsicAddTaintByte,
+  kIntrinsicGetTaintByte,
+  kIntrinsicGetTaintVoid,
+  kIntrinsicAddTaintLong,
+  kIntrinsicGetTaintLong,
+  kIntrinsicAddTaintIntArray,
+  kIntrinsicGetTaintIntArray,
+  kIntrinsicAddTaintByteArray,
+  kIntrinsicGetTaintByteArray,
+  kIntrinsicAddTaintShortArray,
+  kIntrinsicGetTaintShortArray,
+  kIntrinsicAddTaintBooleanArray,
+  kIntrinsicGetTaintBooleanArray,
+  kIntrinsicAddTaintCharArray,
+  kIntrinsicGetTaintCharArray,
+  kIntrinsicAddTaintLongArray,
+  kIntrinsicGetTaintLongArray,
+  /*Taint end*/
 
   kInlineOpNop,
   kInlineOpReturnArg,

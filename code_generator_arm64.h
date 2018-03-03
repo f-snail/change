@@ -54,8 +54,8 @@ static constexpr size_t kParameterFPRegistersLength = arraysize(kParameterFPRegi
 const vixl::Register tr = vixl::x18;                        // Thread Register
 static const vixl::Register kArtMethodRegister = vixl::x0;  // Method register on invoke.
 
-/*Taint*/
-#ifdef WITH_TAINT
+/*Taint begin*/
+#ifdef TAINT_TRACKING
 const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1, vixl::x11, vixl::x12);
 #else
 const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1);
@@ -68,10 +68,22 @@ const vixl::CPURegList vixl_reserved_fp_registers(vixl::d31);
 const vixl::CPURegList runtime_reserved_core_registers(tr, vixl::lr);
 
 // Callee-saved registers defined by AAPCS64.
+// in SetupBlockedRegister() func, these registers need to be blocked in baseline.
+#ifdef TAINT_TRACKING
 const vixl::CPURegList callee_saved_core_registers(vixl::CPURegister::kRegister,
                                                    vixl::kXRegSize,
                                                    vixl::x19.code(),
-                                                   vixl::x30.code());
+                                                   vixl::x30.code(),
+												   /*Taint storage registers*/
+												   vixl::x11.code(),
+												   vixl::x12.code()
+												   );
+#else
+const vixl::CPURegList callee_saved_core_registers(vixl::CPURegister::kRegister,
+												   vixl::kXRegSize,
+												   vixl::x19.code(),
+												   vixl::x30.code());
+#endif
 const vixl::CPURegList callee_saved_fp_registers(vixl::CPURegister::kFPRegister,
                                                  vixl::kDRegSize,
                                                  vixl::d8.code(),

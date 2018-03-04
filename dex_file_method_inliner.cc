@@ -416,18 +416,20 @@ const DexFileMethodInliner::ProtoDef DexFileMethodInliner::kProtoCacheDefs[] = {
     /*Taint TODO*/
     // kProtoCacheII_V
     { kClassCacheVoid, 2, { kClassCacheInt, kClassCacheInt } },
-    // kProtoCacheSI_V
+    //kProtoCacheI_I
+	{ kClassCacheInt, 1, { kClassCacheInt } },
+	// kProtoCacheSI_V
     { kClassCacheVoid, 2, { kClassCacheShort, kClassCacheInt } },
     // kProtoCacheS_I
-    { kClassCacheInt, 1, { kClassCacheShort} },
+    { kClassCacheInt, 1, { kClassCacheShort } },
     // kProtoCacheZI_V
     { kClassCacheVoid, 2, { kClassCacheBoolean, kClassCacheInt } },
     // kProtoCacheZ_I
-    { kClassCacheInt, 1, { kClassCacheBoolean} },
+    { kClassCacheInt, 1, { kClassCacheBoolean } },
     // kProtoCacheBI_V
     { kClassCacheVoid, 2, { kClassCacheByte, kClassCacheInt } },
     // kProtoCacheB_I
-    { kClassCacheInt, 1, { kClassCacheByte} },
+    { kClassCacheInt, 1, { kClassCacheByte } },
     // kProtoCacheJI_J
     { kClassCacheLong, 2, { kClassCacheLong, kClassCacheInt } },
     // kProtoCacheV_I

@@ -20,6 +20,10 @@ import android.content.ContentResolver;
 import android.net.Uri;
 import android.os.Bundle;
 
+//Taint begin
+import java.lang.Taint;
+//Taint end
+
 /**
  * Wrapper class for Cursor that delegates all calls to the actual cursor object.  The primary
  * use for this class is to extend a cursor while overriding only a subset of its methods.
@@ -55,6 +59,14 @@ public class CursorWrapper implements Cursor {
         return mCursor.isClosed();
     }
 
+	//Taint begin
+	private int taint_ = Taint.TAINT_CLEAR;
+
+	public void setTaint(int taint){
+		this.taint_ = taint;
+	}
+	//Taint end
+	
     @Override
     public int getCount() {
         return mCursor.getCount();
@@ -99,8 +111,15 @@ public class CursorWrapper implements Cursor {
 
     @Override
     public double getDouble(int columnIndex) {
-        return mCursor.getDouble(columnIndex);
-    }
+        //Taint begin
+		double val = mCursor.getDouble(columnIndex);
+		/*TODO
+		 * Taint.addTaint(val, taint_);
+		 */
+		return val;
+		//return mCursor.getDouble(columnIndex);
+		//Taint end
+	}
 
     @Override
     public void setExtras(Bundle extras) {
@@ -114,27 +133,50 @@ public class CursorWrapper implements Cursor {
 
     @Override
     public float getFloat(int columnIndex) {
-        return mCursor.getFloat(columnIndex);
-    }
+        //Taint begin
+		float val = mCursor.getFloat(columnIndex);
+		/*TODO
+		 *Taint.addTaint(val, taint_);
+		 */
+		return val;
+		//return mCursor.getFloat(columnIndex);
+		//Taint end
+	}
 
     @Override
     public int getInt(int columnIndex) {
-        return mCursor.getInt(columnIndex);
-    }
+		//Taint begin
+		int val = mCursor.getInt(columnIndex);
+		Taint.addTaint(val, taint_);
+		return val;
+        //return mCursor.getInt(columnIndex);
+		//Taint end
+	}
 
     @Override
     public long getLong(int columnIndex) {
-        return mCursor.getLong(columnIndex);
-    }
+        //Taint begin
+		long val = mCursor.getLong(columnIndex);
+		Taint.addTaint(val, taint_);
+		return val;
+		//return mCursor.getLong(columnIndex);
+		//Taint end
+	}
 
     @Override
     public short getShort(int columnIndex) {
-        return mCursor.getShort(columnIndex);
-    }
+        //Taint begin
+		long val = mCursor.getLong(columnIndex);
+		Taint.addTaint(val, taint_);
+		return val;
+		//return mCursor.getShort(columnIndex);
+		//Taint end
+	}
 
     @Override
     public String getString(int columnIndex) {
-        return mCursor.getString(columnIndex);
+        /*TODO addTaint*/
+		return mCursor.getString(columnIndex);
     }
     
     @Override

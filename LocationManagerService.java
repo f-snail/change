@@ -100,6 +100,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+//Taint begin
+import java.lang.Taint;
+//Taint end
+
 /**
  * The service class that manages LocationProviders and issues location
  * updates and alerts.
@@ -2340,7 +2344,26 @@ public class LocationManagerService extends ILocationManager.Stub {
         Location myLocation = new Location(location);
         String provider = myLocation.getProvider();
 
-        // set "isFromMockProvider" bit if location came from a mock provider. we do not clear this
+		//Taint begin
+		int tag = Taint.TAINT_LV2;
+		/* TODO
+		 * Taint.addTaint(myLocation.getLatitude(), tag);
+		 * Taint.addTaint(myLocation.getLongitude(), tag));
+		 * if (myLocation.hasAltitude()){
+		 * Taint.addTaint(myLocation.getAltitude(), tag);
+		 * }
+		 * if (myLocation.hasSpeed()) {
+		 * Taint.addTaint(myLocation.getSpeed(), tag);
+		 * }
+		 * if (myLocation.hasBearing()) {
+		 * Taint.addTaint(myLocation.getBearing(), tag);
+		 * }
+		 * if (myLocation.hasAccuracy()) {
+		 * Taint.addTaint(myLocation.getAccuracy(), tag);
+		 * }
+		//Taint end
+        
+		// set "isFromMockProvider" bit if location came from a mock provider. we do not clear this
         // bit if location did not come from a mock provider because passive/fused providers can
         // forward locations from mock providers, and should not grant them legitimacy in doing so.
         if (!myLocation.isFromMockProvider() && isMockProvider(provider)) {

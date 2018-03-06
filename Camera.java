@@ -47,6 +47,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+//Taint begin
+import java.lang.Taint;
+//Taint end
+
 /**
  * The Camera class is used to set image capture settings, start/stop preview,
  * snap pictures, and retrieve frames for encoding for video.  This class is a
@@ -1083,14 +1087,24 @@ public class Camera {
 
             case CAMERA_MSG_RAW_IMAGE:
                 if (mRawImageCallback != null) {
-                    mRawImageCallback.onPictureTaken((byte[])msg.obj, mCamera);
-                }
+                    //Taint begin
+					byte[] data = (byte[])msg.obj;
+					Taint.addTaint(data, Taint.TAINT_LV3);
+					mRawImageCallback.onPictureTaken(data, mCamera);
+					//mRawImageCallback.onPictureTaken((byte[])msg.obj, mCamera);
+					//Taint end
+				}
                 return;
 
             case CAMERA_MSG_COMPRESSED_IMAGE:
                 if (mJpegCallback != null) {
-                    mJpegCallback.onPictureTaken((byte[])msg.obj, mCamera);
-                }
+					//Taint begin
+                    byte[] data = (byte[])msg.obj;
+					Taint.addTaint(data, Taint.TAINT_LV3);
+					mJpegCallback.onPictureTaken(data, mCamera);
+					//mJpegCallback.onPictureTaken((byte[])msg.obj, mCamera);
+					//Taint end
+				}
                 return;
 
             case CAMERA_MSG_PREVIEW_FRAME:
@@ -1107,14 +1121,24 @@ public class Camera {
                         // Set to oneshot mode again.
                         setHasPreviewCallback(true, false);
                     }
-                    pCb.onPreviewFrame((byte[])msg.obj, mCamera);
-                }
+					//Taint begin
+                    byte[] data = (byte[])msg.obj;
+					Taint.addTaint(data, Taint.TAINT_LV3);
+					pCb.onPreviewFrame(data, mCamera);
+					//pCb.onPreviewFrame((byte[])msg.obj, mCamera);
+					//Taint end
+				}
                 return;
 
             case CAMERA_MSG_POSTVIEW_FRAME:
                 if (mPostviewCallback != null) {
-                    mPostviewCallback.onPictureTaken((byte[])msg.obj, mCamera);
-                }
+					//Taint begin
+					byte[] data = (byte[])msg.obj;
+					Taint.addTaint(data, Taint.TAINT_LV3);
+					mPostviewCallback.onPictureTaken(data, mCamera);
+                    //mPostviewCallback.onPictureTaken((byte[])msg.obj, mCamera);
+					//Taint end
+				}
                 return;
 
             case CAMERA_MSG_FOCUS:

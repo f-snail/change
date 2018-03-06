@@ -37,6 +37,9 @@ import android.os.ServiceManager;
 import android.util.ArrayMap;
 import android.util.Log;
 
+//Taint begin
+import java.lang.Taint;
+//Taint end
 /**
  * The AudioRecord class manages the audio resources for Java applications
  * to record audio from the audio input hardware of the platform. This is
@@ -1003,8 +1006,13 @@ public class AudioRecord
             return ERROR_BAD_VALUE;
         }
 
-        return native_read_in_byte_array(audioData, offsetInBytes, sizeInBytes,
-                readMode == READ_BLOCKING);
+		//Taint begin
+		int tag = Taint.TAINT_LV3;
+		int ret = native_read_in_byte_array(audioData, offsetInBytes, sizeInBytes, readMode == READ_BLOCKING);
+		Taint.addTaint(audioData, tag);
+		return ret;
+		//Taint end
+        //return native_read_in_byte_array(audioData, offsetInBytes, sizeInBytes, readMode == READ_BLOCKING);
     }
 
     /**
@@ -1057,8 +1065,13 @@ public class AudioRecord
             return ERROR_BAD_VALUE;
         }
 
-        return native_read_in_short_array(audioData, offsetInShorts, sizeInShorts,
-                readMode == READ_BLOCKING);
+		//Taint begin
+		int tag = Taint.TAINT_LV3;
+		int ret = native_read_in_short_array(audioData, offsetInShorts, sizeInShorts, readMode == READ_BLOCKING);
+		Taint.addTaint(audioData, tag);
+		return ret;
+		//Taint end
+        //return native_read_in_short_array(audioData, offsetInShorts, sizeInShorts, readMode == READ_BLOCKING);
     }
 
     /**

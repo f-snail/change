@@ -93,6 +93,10 @@ import java.util.Properties;
 
 import libcore.io.IoUtils;
 
+//Taint begin
+import java.lang.Taint;
+//Taint end
+
 /**
  * A GPS implementation of LocationProvider used by LocationManager.
  *
@@ -1361,8 +1365,14 @@ public class GpsLocationProvider implements LocationProviderInterface {
 
         synchronized (mLocation) {
             mLocationFlags = flags;
-            if ((flags & LOCATION_HAS_LAT_LONG) == LOCATION_HAS_LAT_LONG) {
-                mLocation.setLatitude(latitude);
+            //Taint begin
+			int tag = Taint.TAINT_LV2;
+			if ((flags & LOCATION_HAS_LAT_LONG) == LOCATION_HAS_LAT_LONG) {
+				/*TODO 
+				 * Taint.addTaint(latitude, tag);
+				 * Taint.addTaint(longitude,tag);
+				 */
+				mLocation.setLatitude(latitude);
                 mLocation.setLongitude(longitude);
                 mLocation.setTime(timestamp);
                 // It would be nice to push the elapsed real-time timestamp
@@ -1370,25 +1380,38 @@ public class GpsLocationProvider implements LocationProviderInterface {
                 mLocation.setElapsedRealtimeNanos(SystemClock.elapsedRealtimeNanos());
             }
             if ((flags & LOCATION_HAS_ALTITUDE) == LOCATION_HAS_ALTITUDE) {
-                mLocation.setAltitude(altitude);
+                /*TODO
+				 *Taint.addTaint(altitude, tag);
+				 * */
+				mLocation.setAltitude(altitude);
             } else {
                 mLocation.removeAltitude();
             }
             if ((flags & LOCATION_HAS_SPEED) == LOCATION_HAS_SPEED) {
-                mLocation.setSpeed(speed);
+                /*TODO
+				 *Taint.addTaint(speed, tag);
+				 * */
+				mLocation.setSpeed(speed);
             } else {
                 mLocation.removeSpeed();
             }
             if ((flags & LOCATION_HAS_BEARING) == LOCATION_HAS_BEARING) {
-                mLocation.setBearing(bearing);
+                /*TODO
+				 *Taint.addTaint(bearing, tag);
+				 */
+				mLocation.setBearing(bearing);
             } else {
                 mLocation.removeBearing();
             }
             if ((flags & LOCATION_HAS_ACCURACY) == LOCATION_HAS_ACCURACY) {
-                mLocation.setAccuracy(accuracy);
+                /*TODO
+				 *Taint.addTaint(accuracy, tag);
+				 */
+				mLocation.setAccuracy(accuracy);
             } else {
                 mLocation.removeAccuracy();
             }
+			//Taint end
             mLocation.setExtras(mLocationExtras);
 
             try {

@@ -571,8 +571,8 @@ const DexFileMethodInliner::IntrinsicDef DexFileMethodInliner::kIntrinsicMethods
 
 /*Taint*/
 #define TAINT_INTRINSIC(type, code) \
-    INTRINSIC(Taint, AddTaint, code ## I_ ## code, kIntrinsicAddTaint ## type, 0), \
-    INTRINSIC(Taint, GetTaint, code ## _I, kIntrinsicGetTaint ## type, 0),
+    INTRINSIC(JavaLangTaint, AddTaint, code ## I_ ## code, kIntrinsicAddTaint ## type, 0), \
+    INTRINSIC(JavaLangTaint, GetTaint, code ## _I, kIntrinsicGetTaint ## type, 0),
 
     INTRINSIC(Taint, AddTaint, II_V, kIntrinsicAddTaintInt, 0),
     INTRINSIC(Taint, GetTaint, I_I, kIntrinsicGetTaintInt, 0),

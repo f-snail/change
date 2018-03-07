@@ -259,15 +259,14 @@ void CodeGenerator::InitializeCodeGeneration(size_t number_of_spill_slots,
 	*/
 	/*changed code
 	 * change the stack size to be twice larger than original size.*/
-	  SetFrameSize(RoundUp(
-					  (
-					  number_of_spill_slots * kVRegSize 
-					  + number_of_out_slots * kVRegSize
-					  + maximum_number_of_live_core_registers * GetWordSize()
-					  + maximum_number_of_live_fp_registers * GetFloatingPointSpillSlotSize()
-					  + FrameEntrySpillSize()
-					  ) * 2,
-					  kStackAlignment));
+          SetFrameSize(RoundUp(
+                                  (
+                                   number_of_spill_slots * kVRegSize
+                                   + number_of_out_slots * kVRegSize
+                                   + maximum_number_of_live_core_registers * GetWordSize()
+                                   + maximum_number_of_live_fp_registers * GetFloatingPointSpillSlotSize()
+                                   + FrameEntrySpillSize()) * 2,
+                                  kStackAlignment));
   }
 }
 

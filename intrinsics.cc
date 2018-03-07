@@ -72,8 +72,7 @@ static Primitive::Type GetType(uint64_t data, bool is_op_size) {
 
 static Intrinsics GetIntrinsic(InlineMethod method) {
   switch (method.opcode) {
-
-    //Taint source and sink logic cases.
+    // Taint source and sink logic cases.
           case kIntrinsicAddTaintInt:
                   return Intrinsics::kTaintAddTaintInt;
           case kIntrinsicGetTaintInt:

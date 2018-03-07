@@ -33,10 +33,10 @@ namespace arm64 {
 class CodeGeneratorARM64;
 
 /*Taint*/
-//unsigned taint_code = 16;
-unsigned taint_code1 = 11;//put the taint status of Registers
-unsigned taint_code2 = 12;//put the taint status of FPRegisters
-unsigned width = 2;//the bitwise width of taint stored in register.
+// unsigned taint_code = 16;
+unsigned taint_code1 = 11;  // put the taint status of Registers
+unsigned taint_code2 = 12;  // put the taint status of FPRegisters
+unsigned width = 2;  // the bitwise width of taint stored in register.
 /*Taint end*/
 
 // Use a local definition to prevent copying mistakes.
@@ -69,21 +69,23 @@ const vixl::CPURegList runtime_reserved_core_registers(tr, vixl::lr);
 
 // Callee-saved registers defined by AAPCS64.
 // in SetupBlockedRegister() func, these registers need to be blocked in baseline.
+
+// Taint begin
 #ifdef TAINT_TRACKING
 const vixl::CPURegList callee_saved_core_registers(vixl::CPURegister::kRegister,
                                                    vixl::kXRegSize,
                                                    vixl::x19.code(),
                                                    vixl::x30.code(),
-												   /*Taint storage registers*/
-												   vixl::x11.code(),
-												   vixl::x12.code()
-												   );
+                                                   /*Taint storage registers*/
+                                                   vixl::x11.code(),
+                                                   vixl::x12.code());
 #else
 const vixl::CPURegList callee_saved_core_registers(vixl::CPURegister::kRegister,
-												   vixl::kXRegSize,
-												   vixl::x19.code(),
-												   vixl::x30.code());
+                vixl::kXRegSize,
+                vixl::x19.code(),
+                vixl::x30.code());
 #endif
+// Taint end
 const vixl::CPURegList callee_saved_fp_registers(vixl::CPURegister::kFPRegister,
                                                  vixl::kDRegSize,
                                                  vixl::d8.code(),

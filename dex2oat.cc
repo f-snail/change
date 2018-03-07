@@ -502,7 +502,7 @@ class Dex2Oat FINAL {
  public:
   explicit Dex2Oat(TimingLogger* timings) :
           /*Taint begin*/
-      //compiler_kind_(kUseOptimizingCompiler ? Compiler::kOptimizing : Compiler::kQuick),
+      // compiler_kind_(kUseOptimizingCompiler ? Compiler::kOptimizing : Compiler::kQuick),
       compiler_kind_(Compiler::kOptimizing)
           /*Taint end*/
       instruction_set_(kRuntimeISA),
@@ -699,7 +699,7 @@ class Dex2Oat FINAL {
         StringPiece backend_str = option.substr(strlen("--compiler-backend=")).data();
         if (backend_str == "Quick") {
                 /*Taint begin*/
-          //compiler_kind_ = Compiler::kQuick;
+          // compiler_kind_ = Compiler::kQuick;
           compiler_kind_ = Compiler::kOptimizing;
           /*Taint end*/
         } else if (backend_str == "Optimizing") {
@@ -857,10 +857,10 @@ class Dex2Oat FINAL {
     if (!requested_specific_compiler && !kUseOptimizingCompiler) {
       // If no specific compiler is requested, the current behavior is
       // to compile the boot image with Quick, and the rest with Optimizing.
-      //Taint begin
-      //compiler_kind_ = image_ ? Compiler::kQuick : Compiler::kOptimizing;
+      // Taint begin
+      // compiler_kind_ = image_ ? Compiler::kQuick : Compiler::kOptimizing;
       compiler_kind_ =  Compiler::kOptimizing;
-      //Taint end
+      // Taint end
     }
 
     if (compiler_kind_ == Compiler::kOptimizing) {

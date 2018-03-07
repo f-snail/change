@@ -412,13 +412,13 @@ const DexFileMethodInliner::ProtoDef DexFileMethodInliner::kProtoCacheDefs[] = {
     { kClassCacheVoid, 1, { kClassCacheJavaLangStringBuffer } },
     // kProtoCacheStringBuilder_V
     { kClassCacheVoid, 1, { kClassCacheJavaLangStringBuilder } },
-    
+
     /*Taint TODO*/
     // kProtoCacheII_V
     { kClassCacheVoid, 2, { kClassCacheInt, kClassCacheInt } },
-    //kProtoCacheI_I
-	{ kClassCacheInt, 1, { kClassCacheInt } },
-	// kProtoCacheSI_V
+    // kProtoCacheI_I
+    { kClassCacheInt, 1, { kClassCacheInt } },
+    // kProtoCacheSI_V
     { kClassCacheVoid, 2, { kClassCacheShort, kClassCacheInt } },
     // kProtoCacheS_I
     { kClassCacheInt, 1, { kClassCacheShort } },
@@ -468,8 +468,8 @@ const DexFileMethodInliner::IntrinsicDef DexFileMethodInliner::kIntrinsicMethods
     { { kClassCache ## c, kNameCache ## n, kProtoCache ## p }, { o, kInlineIntrinsic, { d } } }
 
     /*Taint*/
-    //INTRINSIC(JavaLangTaint, AddTaint, TI_V /*ProtoCache TODO*/, kIntrinsicAddTaint, 0 /*d TODO*/),
-    //INTRINSIC(JavaLangTaint, GetTaint, TI_V /*ProtoCache TODO*/, kIntrinsicGetTaint, 0 /*d TODO*/),
+    // INTRINSIC(JavaLangTaint, AddTaint, TI_V /*ProtoCache TODO*/, kIntrinsicAddTaint, 0 /*d TODO*/),
+    // INTRINSIC(JavaLangTaint, GetTaint, TI_V /*ProtoCache TODO*/, kIntrinsicGetTaint, 0 /*d TODO*/),
     /*Taint end*/
     INTRINSIC(JavaLangDouble, DoubleToRawLongBits, D_J, kIntrinsicDoubleCvt, 0),
     INTRINSIC(JavaLangDouble, LongBitsToDouble, J_D, kIntrinsicDoubleCvt, kIntrinsicFlagToFloatingPoint),
@@ -572,9 +572,9 @@ const DexFileMethodInliner::IntrinsicDef DexFileMethodInliner::kIntrinsicMethods
 /*Taint*/
 #define TAINT_INTRINSIC(type, code) \
     INTRINSIC(Taint, AddTaint, code ## I_ ## code, kIntrinsicAddTaint ## type, 0), \
-    INTRINSIC(Taint, GetTaint, code ## _I, kIntrinsicGetTaint ## type, 0),  
-    
-    INTRINSIC(Taint, AddTaint, II_V, kIntrinsicAddTaintInt, 0),  
+    INTRINSIC(Taint, GetTaint, code ## _I, kIntrinsicGetTaint ## type, 0),
+
+    INTRINSIC(Taint, AddTaint, II_V, kIntrinsicAddTaintInt, 0),
     INTRINSIC(Taint, GetTaint, I_I, kIntrinsicGetTaintInt, 0),
     INTRINSIC(Taint, AddTaint, SI_V, kIntrinsicAddTaintShort, 0),
     INTRINSIC(Taint, GetTaint, S_I, kIntrinsicGetTaintShort, 0),

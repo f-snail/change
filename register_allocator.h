@@ -76,12 +76,11 @@ class RegisterAllocator {
         + float_spill_slots_.Size()
         + double_spill_slots_.Size();
 	*/
-	  return 2 * (
-				  int_spill_slots_.Size()
-				  + long_spill_slots_.Size()
-				  + float_spill_slots_.Size()
-				  + double_spill_slots_.Size()
-				 );
+          return 2 * (
+                          int_spill_slots_.Size()
+                          + long_spill_slots_.Size()
+                          + float_spill_slots_.Size()
+                          + double_spill_slots_.Size());
   }
 
   static constexpr const char* kRegisterAllocatorPassName = "register";

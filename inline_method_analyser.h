@@ -35,10 +35,6 @@ class MethodVerifier;
 }  // namespace verifier
 
 enum InlineMethodOpcode : uint16_t {
-  /*Taint*/
-  kIntrinsicAddTaint,
-  kIntrinsicGetTaint,
-  /*Taint end*/
   kIntrinsicDoubleCvt,
   kIntrinsicFloatCvt,
   kIntrinsicReverseBits,

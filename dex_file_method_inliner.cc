@@ -574,17 +574,17 @@ const DexFileMethodInliner::IntrinsicDef DexFileMethodInliner::kIntrinsicMethods
     INTRINSIC(JavaLangTaint, AddTaint, code ## I_ ## code, kIntrinsicAddTaint ## type, 0), \
     INTRINSIC(JavaLangTaint, GetTaint, code ## _I, kIntrinsicGetTaint ## type, 0),
 
-    INTRINSIC(Taint, AddTaint, II_V, kIntrinsicAddTaintInt, 0),
-    INTRINSIC(Taint, GetTaint, I_I, kIntrinsicGetTaintInt, 0),
-    INTRINSIC(Taint, AddTaint, SI_V, kIntrinsicAddTaintShort, 0),
-    INTRINSIC(Taint, GetTaint, S_I, kIntrinsicGetTaintShort, 0),
-    INTRINSIC(Taint, AddTaint, ZI_V, kIntrinsicAddTaintBoolean, 0),
-    INTRINSIC(Taint, GetTaint, Z_I, kIntrinsicGetTaintBoolean, 0),
-    INTRINSIC(Taint, AddTaint, BI_V, kIntrinsicAddTaintByte, 0),
-    INTRINSIC(Taint, GetTaint, B_I, kIntrinsicGetTaintByte, 0),
-    INTRINSIC(Taint, GetTaint, _I, kIntrinsicGetTaintVoid, 0),
-    INTRINSIC(Taint, AddTaint, JI_J, kIntrinsicAddTaintLong, 0),
-    INTRINSIC(Taint, GetTaint, J_I, kIntrinsicGetTaintLong, 0),
+    INTRINSIC(JavaLangTaint, AddTaint, II_V, kIntrinsicAddTaintInt, 0),
+    INTRINSIC(JavaLangTaint, GetTaint, I_I, kIntrinsicGetTaintInt, 0),
+    INTRINSIC(JavaLangTaint, AddTaint, SI_V, kIntrinsicAddTaintShort, 0),
+    INTRINSIC(JavaLangTaint, GetTaint, S_I, kIntrinsicGetTaintShort, 0),
+    INTRINSIC(JavaLangTaint, AddTaint, ZI_V, kIntrinsicAddTaintBoolean, 0),
+    INTRINSIC(JavaLangTaint, GetTaint, Z_I, kIntrinsicGetTaintBoolean, 0),
+    INTRINSIC(JavaLangTaint, AddTaint, BI_V, kIntrinsicAddTaintByte, 0),
+    INTRINSIC(JavaLangTaint, GetTaint, B_I, kIntrinsicGetTaintByte, 0),
+    INTRINSIC(JavaLangTaint, GetTaint, _I, kIntrinsicGetTaintVoid, 0),
+    INTRINSIC(JavaLangTaint, AddTaint, JI_J, kIntrinsicAddTaintLong, 0),
+    INTRINSIC(JavaLangTaint, GetTaint, J_I, kIntrinsicGetTaintLong, 0),
 
     TAINT_INTRINSIC(IntArray, IntArray)
     TAINT_INTRINSIC(ByteArray, ByteArray)
@@ -952,7 +952,7 @@ void DexFileMethodInliner::FindIntrinsics(const DexFile* dex_file) {
   DCHECK(dex_file != nullptr);
   DCHECK(dex_file_ == nullptr);
   IndexCache cache;
-  for (const IntrinsicDef& def : kIotrinsicMethods) {
+  for (const IntrinsicDef& def : kIntrinsicMethods) {
     uint32_t method_idx = FindMethodIndex(dex_file, &cache, def.method_def);
     if (method_idx != kIndexNotFound) {
       DCHECK(inline_methods_.find(method_idx) == inline_methods_.end());

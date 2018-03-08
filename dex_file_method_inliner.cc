@@ -416,8 +416,8 @@ const DexFileMethodInliner::ProtoDef DexFileMethodInliner::kProtoCacheDefs[] = {
     /*Taint TODO*/
     // kProtoCacheII_V
     { kClassCacheVoid, 2, { kClassCacheInt, kClassCacheInt } },
-    // kProtoCacheI_I
-    { kClassCacheInt, 1, { kClassCacheInt } },
+    // kProtoCacheI_I definition in line 293
+    // { kClassCacheInt, 1, { kClassCacheInt } }, 
     // kProtoCacheSI_V
     { kClassCacheVoid, 2, { kClassCacheShort, kClassCacheInt } },
     // kProtoCacheS_I

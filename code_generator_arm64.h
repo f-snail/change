@@ -371,6 +371,12 @@ class CodeGeneratorARM64 : public CodeGenerator {
 
   void GenerateStaticOrDirectCall(HInvokeStaticOrDirect* invoke, vixl::Register temp);
 
+  // Taint begin
+  // void Add_Taint_Cmp(vixl::Register dst, vixl::Register rhs, vixl::Register lhs, vixl::Register taint_str);
+  // void Add_Taint_Cmp_F(vixl::FPRegister dst, vixl::FPRegister rhs, vixl::FPRegister lhs, vixl::Register taint_str);
+  // void Taint_Clear(vixl::Register dst, vixl::Register taint_str);
+  // Taint end
+
  private:
   // Labels for each block that will be compiled.
   vixl::Label* block_labels_;

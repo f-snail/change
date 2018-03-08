@@ -286,6 +286,7 @@ class DexFileMethodInliner {
       kProtoCacheStringBuilder_V,
       /*Taint*/
       kProtoCacheII_V,
+      kProtoCacheI_I,
       kProtoCacheSI_V,
       kProtoCacheS_I,
       kProtoCacheZI_V,

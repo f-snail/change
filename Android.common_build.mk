@@ -195,11 +195,12 @@ art_cflags := \
   -Wredundant-decls \
   -Wshadow \
   -fvisibility=protected \
+  $(art_default_gc_type_cflags)
+
 #Taint begin#
 #-Werror \
 #-Wunused \
 #Taint end#
-  $(art_default_gc_type_cflags)
 
 # Missing declarations: too many at the moment, as we use "extern" quite a bit.
 #  -Wmissing-declarations \

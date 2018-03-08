@@ -417,7 +417,7 @@ const DexFileMethodInliner::ProtoDef DexFileMethodInliner::kProtoCacheDefs[] = {
     // kProtoCacheII_V
     { kClassCacheVoid, 2, { kClassCacheInt, kClassCacheInt } },
     // kProtoCacheI_I definition in line 293
-    // { kClassCacheInt, 1, { kClassCacheInt } }, 
+    // { kClassCacheInt, 1, { kClassCacheInt } },
     // kProtoCacheSI_V
     { kClassCacheVoid, 2, { kClassCacheShort, kClassCacheInt } },
     // kProtoCacheS_I

@@ -54,8 +54,8 @@ INTRINSICS_LIST(OPTIMIZING_INTRINSICS)
   bool TryDispatch(HInvoke* invoke);
 
 // Taint begin
-void AddTaintLoc(ArenaAllocator* arena, HInvoke* invoke);
-void GetTaintLoc(ArenaAllocator* arena, HInvoke* invoke);
+// void AddTaintLoc(ArenaAllocator* arena, HInvoke* invoke);
+// void GetTaintLoc(ArenaAllocator* arena, HInvoke* invoke);
 // Taint end
 
  private:

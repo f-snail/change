@@ -151,7 +151,7 @@ bool IntrinsicLocationsBuilderARM64::TryDispatch(HInvoke* invoke) {
 
 /*Integral type*/
 // the general used AddTaint_LocationBuilder format
-static void AddTaintLoc(ArenaAllocator* arena, HInvoke* invoke) {
+void IntrinsicLocationsBuilderARM64::AddTaintLoc(ArenaAllocator* arena, HInvoke* invoke) {
         LocationSummary* locations = new (arena_) LocationSummary(invoke,
                                                   LocationSummary::kCall,
                                                   kIntrinsified);
@@ -168,8 +168,8 @@ static void AddTaintToTarget(LocationSummary* locations, bool isFloat, vixl::Mac
     Register t_input = XRegisterFrom(input1);  // the register that contains taint.
     DCHECK(in_code != 63 && t_input.code() != 63);
 
-    Register taint_str1 = Register::XRegisterFromCode(taint_code1);
-    Register taint_str2 = Register::XRegisterFromCode(taint_code2);
+    Register taint_str1 = Register::XRegFromCode(taint_code1);
+    Register taint_str2 = Register::XRegFromCode(taint_code2);
 
     unsigned immr_bfm = 64 - 2 * in_code;
     unsigned imms_bfm = 1;
@@ -183,7 +183,7 @@ static void AddTaintToTarget(LocationSummary* locations, bool isFloat, vixl::Mac
 }
 
 // the general VisitAddTaint format
-void IntrinsicCodeGeneratorARM64::VisitAddTaintInt(HInvoke* invoke) {
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintInt(HInvoke* invoke) {
         vixl::MacroAssembler* masm = GetVIXLAssembler();
         LocationSummary* locations = invoke->GetLocations();
 
@@ -191,7 +191,7 @@ void IntrinsicCodeGeneratorARM64::VisitAddTaintInt(HInvoke* invoke) {
 }
 
 // the general used GetTaint_LocationBuilder format
-static void GetTaintLoc(ArenaAllocator* arena, HInvoke* invoke) {
+void IntrinsicLocationsBuilderARM64::GetTaintLoc(ArenaAllocator* arena, HInvoke* invoke) {
         LocationSummary* locations = new (arena_) LocationSummary(invoke,
                                                   LocationSummary::kCall,
                                                   kIntrinsified);
@@ -208,8 +208,8 @@ static void GetTaintFromTarget(LocationSummary* locations, bool isFloat, vixl::M
         Register t_out = XRegisterFrom(output);  // the register that contains the returned taint level
         DCHECK(in_code != 63 && t_out.code() != 63);
 
-        Register taint_str1 = Register::XRegisterFromCode(taint_code1);
-        Register taint_str2 = Register::XRegisterFromCode(taint_code2);
+        Register taint_str1 = Register::XRegFromCode(taint_code1);
+        Register taint_str2 = Register::XRegFromCode(taint_code2);
 
         unsigned lsb = 2 * in_code;  // the least significant bit,0-63
         unsigned width = 2;  // the width of the extracted bit field
@@ -221,48 +221,48 @@ static void GetTaintFromTarget(LocationSummary* locations, bool isFloat, vixl::M
 }
 
 // the general VisitGetTaint format
-void IntrinsicCodeGeneratorARM64::VisitGetTaintInt(HInvoke* invoke) {
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintInt(HInvoke* invoke) {
         vixl::MacroAssembler* masm = GetVIXLAssembler();
         LocationSummary* locations = invoke->GetLocations();
 
         GetTaintFromTarget(locations, false, masm);
 }
 
-void IntrinsicLocationsBuilderARM64::VisitAddTaintInt(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
-void IntrinsicLocationsBuilderARM64::VisitGetTaintInt(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintInt(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintInt(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
 
-void IntrinsicLocationsBuilderARM64::VisitAddTaintLong(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
-void IntrinsicCodeGeneratorARM64::VisitAddTaintLong(HInvoke* invoke) {VisitAddTaintInt(invoke);}
-void IntrinsicLocationsBuilderARM64::VisitGetTaintLong(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
-void IntrinsicCodeGeneratorARM64::VisitGetTaintLong(HInvoke* invoke) { VisitGetTaintInt(invoke);}
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintLong(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintLong(HInvoke* invoke) {VisitTaintAddTaintInt(invoke);}
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintLong(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintLong(HInvoke* invoke) { VisitTaintGetTaintInt(invoke);}
 
-void IntrinsicLocationsBuilderARM64::VisitAddTaintShort(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
-void IntrinsicCodeGeneratorARM64::VisitAddTaintShort(HInvoke* invoke) { VisitAddTaintInt(invoke);}
-void IntrinsicLocationsBuilderARM64::VisitGetTaintShort(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
-void IntrinsicCodeGeneratorARM64::VisitGetTaintShort(HInvoke* invoke) { VisitGetTaintInt(invoke);}
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintShort(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintShort(HInvoke* invoke) { VisitTaintAddTaintInt(invoke);}
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintShort(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintShort(HInvoke* invoke) { VisitTaintGetTaintInt(invoke);}
 
-void IntrinsicLocationsBuilderARM64::VisitAddTaintByte(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
-void IntrinsicCodeGeneratorARM64::VisitAddTaintByte(HInvoke* invoke) { VisitAddTaintInt(invoke);}
-void IntrinsicLocationsBuilderARM64::VisitGetTaintByte(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
-void IntrinsicCodeGeneratorARM64::VisitGetTaintByte(HInvoke* invoke) { VisitGetTaintInt(invoke);}
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintByte(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintByte(HInvoke* invoke) { VisitTaintAddTaintInt(invoke);}
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintByte(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintByte(HInvoke* invoke) { VisitTaintGetTaintInt(invoke);}
 
-void IntrinsicLocationsBuilderARM64::VisitAddTaintBoolean(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
-void IntrinsicCodeGeneratorARM64::VisitAddTaintBoolean(HInvoke* invoke) { VisitAddTaintInt(invoke);}
-void IntrinsicLocationsBuilderARM64::VisitGetTaintBoolean(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
-void IntrinsicCodeGeneratorARM64::VisitGetTaintBoolean(HInvoke* invoke) { VisitGetTaintInt(invoke);}
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintBoolean(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintBoolean(HInvoke* invoke) { VisitTaintAddTaintInt(invoke);}
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintBoolean(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintBoolean(HInvoke* invoke) { VisitTaintGetTaintInt(invoke);}
 
-void IntrinsicLocationsBuilderARM64::VisitGetTaintVoid(HInvoke* invoke) {
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintVoid(HInvoke* invoke) {
         LocationSummary* locations = new (arena_) LocationSummary(invoke,
                                                   LocationSummary::kCall,
                                                   kIntrinsified);
         locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
 }
-void IntrinsicCodeGeneratorARM64::VisitGetTaintVoid(HInvoke* invoke) {
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintVoid(HInvoke* invoke) {
         LocationSummary* locations = invoke->GetLocations();
         vixl::MacroAssembler* masm = GetVIXLAssembler();
 
-        Register t_out = XRegisterFrom(locations->out());
-        Register taint_str1 = Register::XRegisterFromCode(taint_code1);
+        Register t_out = XRegisterFrom(locations->Out());
+        Register taint_str1 = Register::XRegFromCode(taint_code1);
         __ Mov(t_out, taint_str1);
 }
 /*
@@ -300,7 +300,7 @@ void IntrinsicCodeGeneratorARM64::VisitGetTaintVoidF(HInvoke* invoke){
 
 
 /*Array type*/
-void IntrinsicLocationsBuilderARM64::VisitGetTaintIntArray(HInvoke* invoke) {
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintIntArray(HInvoke* invoke) {
         LocationSummary* locations = new (arena_) LocationSummary(invoke,
                                                   LocationSummary::kCall,
                                                   kIntrinsified);
@@ -309,7 +309,7 @@ void IntrinsicLocationsBuilderARM64::VisitGetTaintIntArray(HInvoke* invoke) {
         locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
 }
 // TODO
-void IntrinsicCodeGeneratorARM64::VisitAddTaintIntArray(HInvoke* invoke) {
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintIntArray(HInvoke* invoke) {
         vixl::MacroAssembler* masm = GetVIXLAssembler();
         LocationSummary* locations = invoke->GetLocations();
 
@@ -318,7 +318,8 @@ void IntrinsicCodeGeneratorARM64::VisitAddTaintIntArray(HInvoke* invoke) {
         __ Mov(XRegisterFrom(locations->Out()), XRegisterFrom(locations->InAt(0)));
 }
 
-void IntrinsicLocationsBuilderARM64::VisitGetTaintIntArray(HInvoke* invoke) {
+/**
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintIntArray(HInvoke* invoke) {
         LocationSummary* locations = new (arena_) LocationSummary(invoke,
                                                   LocationSummary::kCall,
                                                   kIntrinsified);
@@ -326,36 +327,25 @@ void IntrinsicLocationsBuilderARM64::VisitGetTaintIntArray(HInvoke* invoke) {
         locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
 }
 // TODO
-void IntrinsicCodeGeneratorARM64::VisitGetTaintIntArray(HInvoke* invoke) {
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintIntArray(HInvoke* invoke) {
         vixl::MacroAssembler* masm = GetVIXLAssembler();
         LocationSummary* locations = invoke->GetLocations();
         GetTaintFromTarget(locations, false, masm);
 }
+*/
 
 #define VISIT_TAINT_INTRINSIC(type, visit_add_taint, visit_get_taint)  \
-        void IntrinsicLocationsBuilderARM64::VisitAddTaint ## type(HInvoke* invoke) {visit_add_taint(invoke);}  \
-void IntrinsicCodeGeneratorARM64::VisitAddTaint ## type(HInvoke* invoke) {visit_add_taint(invoke);}  \
-void IntrinsicLocationsBuilderARM64::VisitGetTaint ## type(HInvoke* invoke) {visit_get_taint(invoke);}  \
-void IntrinsicCodeGeneratorARM64::VisitGetTaint ## type(HInvoke* invoke) {visit_get_taint(invoke);}
-VISIT_TAINT_INTRINSIC(ByteArray, VisitAddTaintIntArray, VisitGetTaintIntArray)
-VISIT_TAINT_INTRINSIC(ShortArray, VisitAddTaintIntArray, VisitGetTaintIntArray)
-VISIT_TAINT_INTRINSIC(BooleanArray, VisitAddTaintIntArray, VisitGetTaintIntArray)
-VISIT_TAINT_INTRINSIC(CharArray, VisitAddTaintIntArray, VisitGetTaintIntArray)
-VISIT_TAINT_INTRINSIC(LongArray, VisitAddTaintIntArray, VisitGetTaintIntArray)
+        void IntrinsicLocationsBuilderARM64::VisitTaintAddTaint ## type(HInvoke* invoke) {visit_add_taint(invoke);}  \
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaint ## type(HInvoke* invoke) {visit_add_taint(invoke);}  \
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaint ## type(HInvoke* invoke) {visit_get_taint(invoke);}  \
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaint ## type(HInvoke* invoke) {visit_get_taint(invoke);}
+VISIT_TAINT_INTRINSIC(ByteArray, VisitTaintAddTaintIntArray, VisitTaintGetTaintIntArray)
+VISIT_TAINT_INTRINSIC(ShortArray, VisitTaintAddTaintIntArray, VisitTaintGetTaintIntArray)
+VISIT_TAINT_INTRINSIC(BooleanArray, VisitTaintAddTaintIntArray, VisitTaintGetTaintIntArray)
+VISIT_TAINT_INTRINSIC(CharArray, VisitTaintAddTaintIntArray, VisitTaintGetTaintIntArray)
+VISIT_TAINT_INTRINSIC(LongArray, VisitTaintAddTaintIntArray, VisitTaintGetTaintIntArray)
 
 /*Taint end*/
-
-
-
-// location part: add taint to integral data.
-// TODO :need to change the java part.
-void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintInt(HInvoke* invoke) {
-        CreateTIIntToVoidLocations(arena_, invoke);
-}
-// add taint to floating-point data.
-void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintF(HInvoke* invoke) {
-        CreateTFIntToVoidLocations(arena_, invoke);
-}
 
 /*-------------Taint end--------------------------*/
 

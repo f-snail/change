@@ -877,7 +877,7 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
 
     // Taint
     unsigned out_code = dst.code();
-    DCHECK_NE(out_code, 63);
+    DCHECK_NE(static_cast<int>(out_code), 63);
     unsigned immr_bfm = 64 - 2 * out_code;
     unsigned imms_bfm = 1;
 
@@ -907,7 +907,7 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
               // Taint
               UseScratchRegisterScope temps(GetVIXLAssembler());
               in_code = RegisterFrom(source, type).code();
-              DCHECK_NE(in_code, 63);  // not supposed to be sp,in vixl,the code of SP is 63.
+              DCHECK_NE(static_cast<int>(in_code), 63);  // not supposed to be sp,in vixl,the code of SP is 63.
               temps.Exclude(Register(dst), RegisterFrom(source, type));
               Register temp = temps.AcquireX();
               ADD_TAINT_LOAD(taint_str1, in_code, out_code)
@@ -918,7 +918,7 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
         // Taint
         UseScratchRegisterScope temps(GetVIXLAssembler());
         in_code = FPRegisterFrom(source, type).code();
-        DCHECK_NE(in_code, 63);
+        DCHECK_NE(static_cast<int>(in_code), 63);
         Register temp = temps.AcquireX();
         ADD_TAINT_LOAD(taint_str2, in_code, out_code)
         // Taint end
@@ -941,7 +941,7 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
       UseScratchRegisterScope temps(GetVIXLAssembler());
       Register temp = temps.AcquireX();
       in_code = CPURegisterFrom(source, type).code();
-      DCHECK_NE(in_code, 63);
+      DCHECK_NE(static_cast<int>(in_code), 63);
       unsigned immr_bfm = 64 - 2 * in_code;
       unsigned imms_bfm = 1;
       if (source.IsRegister()) {
@@ -1500,7 +1500,7 @@ void InstructionCodeGeneratorARM64::HandleBinaryOp(HBinaryOperation* instr) {
       if (rhs.IsShiftedRegister() || rhs.IsExtendedRegister()) {
               Register rin = rhs.reg();
               in_code1 = rin.code();
-              DCHECK_NE(in_code1, 63);
+              DCHECK_NE(static_cast<int>(in_code1), 63);
               temps.Exclude(dst, lhs, rin);
       } else {
               in_code1 = -1;
@@ -1639,7 +1639,7 @@ void InstructionCodeGeneratorARM64::HandleShift(HBinaryOperation* instr) {
 #ifdef TAINT_TRACKING
         // Taint
         unsigned in_code1 = rhs_reg.code();
-        DCHECK_NE(in_code1, 63);
+        DCHECK_NE(static_cast<int>(in_code1), 63);
         temps.Exclude(rhs_reg);
         Register temp1 = temps.AcquireX();
         Register temp2 = temps.AcquireX();
@@ -2704,13 +2704,13 @@ void InstructionCodeGeneratorARM64::VisitNeg(HNeg* neg) {
       /*Taint begin*/
       Register taint_str = Register::XRegFromCode(taint_code1);
       unsigned out_code = dst.code();  // the code of sp is 63,but it's not supposed to use sp here.
-      DCHECK_NE(out_code, 63);
+      DCHECK_NE(static_cast<int>(out_code), 63);
       temps.Exclude(dst);  // exclude the register of output.
 #endif
       if (rhs.IsShiftedRegister() || rhs.IsExtendedRegister()) {
               Register rin = rhs.reg();
               unsigned in_code = rin.code();
-              DCHECK_NE(in_code, 63);
+              DCHECK_NE(static_cast<int>(in_code), 63);
               temps.Exclude(rin);
 
 #ifdef TAINT_TRACKING

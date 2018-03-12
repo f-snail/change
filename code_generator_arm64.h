@@ -32,12 +32,15 @@ namespace arm64 {
 
 class CodeGeneratorARM64;
 
+#ifndef CODEGENERAORARM64_H__
+#define CODEGENERAORARM64_H__
 /*Taint*/
 // unsigned taint_code = 16;
-unsigned taint_code1 = 11;  // put the taint status of Registers
-unsigned taint_code2 = 12;  // put the taint status of FPRegisters
-unsigned width = 2;  // the bitwise width of taint stored in register.
+static unsigned taint_code1 = 11;  // put the taint status of Registers
+static unsigned taint_code2 = 12;  // put the taint status of FPRegisters
+// unsigned width = 2;  // the bitwise width of taint stored in register.
 /*Taint end*/
+#endif /* CODEGENERAORARM64_H__ */
 
 // Use a local definition to prevent copying mistakes.
 static constexpr size_t kArm64WordSize = kArm64PointerSize;

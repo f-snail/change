@@ -503,7 +503,7 @@ class Dex2Oat FINAL {
   explicit Dex2Oat(TimingLogger* timings) :
           /*Taint begin*/
       // compiler_kind_(kUseOptimizingCompiler ? Compiler::kOptimizing : Compiler::kQuick),
-      compiler_kind_(Compiler::kOptimizing)
+      compiler_kind_(Compiler::kOptimizing),
           /*Taint end*/
       instruction_set_(kRuntimeISA),
       // Take the default set of instruction features from the build.

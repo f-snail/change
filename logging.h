@@ -52,7 +52,7 @@ struct LogVerbosity {
   bool third_party_jni;  // Enabled with "-verbose:third-party-jni".
   bool threads;
   bool verifier;
-  bool taintart = true;  // Taint
+  bool TA64 = true;  // Taint
 };
 
 // Global log verbosity setting, initialized by InitLogging.

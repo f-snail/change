@@ -942,7 +942,7 @@ void SlowPathCode::SaveLiveRegisters(CodeGenerator* codegen, LocationSummary* lo
         DCHECK_LT(i, kMaximumNumberOfExpectedRegisters);
         saved_core_stack_offsets_[i] = stack_offset;
         // Taint begin
-        // put the taint of register into the next slot. so stack_offset need to add two slots size.        
+        // put the taint of register into the next slot. so stack_offset need to add two slots size.
         // stack_offset += codegen->SaveCoreRegister(stack_offset, i);
         stack_offset += 2 * codegen->SaveCoreRegister(stack_offset, i);
         // Taint end
@@ -972,7 +972,7 @@ void SlowPathCode::RestoreLiveRegisters(CodeGenerator* codegen, LocationSummary*
         // Taint begin
         // get the taint from stack into taint_str.
         // stack_offset += codegen->RestoreCoreRegister(stack_offset, i);
-        stack_offset += 2 * codegen->RestoreCoreRegister(stack_offset, i);       
+        stack_offset += 2 * codegen->RestoreCoreRegister(stack_offset, i);
         // Taint end
       }
     }

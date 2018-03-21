@@ -73,22 +73,18 @@ const vixl::CPURegList runtime_reserved_core_registers(tr, vixl::lr);
 // Callee-saved registers defined by AAPCS64.
 // in SetupBlockedRegister() func, these registers need to be blocked in baseline.
 
-// Taint begin
-#ifdef TAINT_TRACKING
-const vixl::CPURegList callee_saved_core_registers(vixl::CPURegister::kRegister,
+/*const vixl::CPURegList callee_saved_core_registers(vixl::CPURegister::kRegister,
                                                    vixl::kXRegSize,
                                                    vixl::x19.code(),
                                                    vixl::x30.code(),
-                                                   /*Taint storage registers*/
+                                                   Taint storage registers
                                                    vixl::x11.code(),
-                                                   vixl::x12.code());
-#else
+                                                   vixl::x12.code()); */
 const vixl::CPURegList callee_saved_core_registers(vixl::CPURegister::kRegister,
                 vixl::kXRegSize,
                 vixl::x19.code(),
                 vixl::x30.code());
-#endif
-// Taint end
+
 const vixl::CPURegList callee_saved_fp_registers(vixl::CPURegister::kFPRegister,
                                                  vixl::kDRegSize,
                                                  vixl::d8.code(),

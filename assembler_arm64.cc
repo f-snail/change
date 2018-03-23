@@ -652,12 +652,13 @@ static inline dwarf::Reg DWARFReg(CPURegister reg) {
 void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
   int size = registers.RegisterSizeInBytes();
   const Register sp = vixl_masm_->StackPointer();
-  /*original version
   while (registers.Count() >= 2) {
     const CPURegister& dst0 = registers.PopLowestIndex();
     const CPURegister& dst1 = registers.PopLowestIndex();
-	//Stp:store pair of Registers to memory. 
     ___ Stp(dst0, dst1, MemOperand(sp, offset));
+    // cfi directives:
+    // cfi_rel_offset register, offset
+    // Previous value of register is saved at offset offset from the current CFA register. This is transformed to .cfi_offset using the known displacement of the CFA register from the CFA. This is often easier to use, because the number will match the code it’s annotating.
     cfi_.RelOffset(DWARFReg(dst0), offset);
     cfi_.RelOffset(DWARFReg(dst1), offset + size);
     offset += 2 * size;
@@ -667,46 +668,19 @@ void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
     ___ Str(dst0, MemOperand(sp, offset));
     cfi_.RelOffset(DWARFReg(dst0), offset);
   }
-  */
-
-  /*Taint version
-   *move the taint of the spilled register to stack as well, just near the stack that stores spilled register.
-   */
-  while(!registers.IsEmpty()){
-	  const CPURegister& dst = registers.PopLowestIndex();
-	  unsigned out_code = dst.code();
-	  UseScratchRegisterScope temps(GetVIXLAssembler());
-	  Register temp = temps.AcquireW();
-	  Register taint_str1 = Register::XRegisterFromCode(taint_code1);
-	  Register taint_str2 = Register::XRegisterFromCode(taint_code2);
-	  unsigned immr_bfm = 64 - 2 * out_code;
-	  unsigned imms_bfm = 1;
-	  unsigned t_code = temp.code();//the register number of temp.
-
-	  if(dst.IsRegister()){
-		  __ Ubfm(Register::XRegFromCode(t_code), taint_str1, out_code * 2, (out_code * 2 + 1));
-	  }else if(dst.IsFpuRegister()){
-		  __ Ubfm(Register::XRegFromCode(t_code), taint_str2, out_code * 2, (out_code * 2 + 1));
-	  }
-	  ___ Stp(dst, temp, MemOperand(sp, offset));
-	  cfi_.RelOffset(DWARFReg(dst), offset);
-	  cfi_.RelOffset(DWARFReg(temp), offset + size);//offset need to be changed.
-	  offset += size + 4;
-	  //here 4 represent the size of temp,it should be 32 bits - 4 bytes.
-	  //which means that taint just occupies one stack slot.
-  }
-  /*Taint end*/
   DCHECK(registers.IsEmpty());
 }
 
 void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
   int size = registers.RegisterSizeInBytes();
   const Register sp = vixl_masm_->StackPointer();
-  /* original version
   while (registers.Count() >= 2) {
     const CPURegister& dst0 = registers.PopLowestIndex();
     const CPURegister& dst1 = registers.PopLowestIndex();
     ___ Ldp(dst0, dst1, MemOperand(sp, offset));
+    // cfi directives:
+    // .cfi_restore register
+    // .cfi_restore says that the rule for register is now the same as it was at the beginning of the function, after all initial instruction added by .cfi_startproc were executed.
     cfi_.Restore(DWARFReg(dst0));
     cfi_.Restore(DWARFReg(dst1));
     offset += 2 * size;
@@ -716,40 +690,9 @@ void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
     ___ Ldr(dst0, MemOperand(sp, offset));
     cfi_.Restore(DWARFReg(dst0));
   }
-  */
-  /*Taint version
-   *move the taint from memory to taint_str register.
-   */
-  while(!registers.IsEmpty())
-  {
-	  const CPURegister& dst = registers.PopLowestIndex();
-	  unsigned out_code = dst.code();
-	  UseScratchRegisterScope temps(GetVIXLAssembler());
-	  Register temp = temps.AcquireW();
-	  Register taint_str1 = Register::XRegisterFromCode(taint_code1);
-	  Register taint_str2 = Register::XRegisterFromCode(taint_code2);
-	  unsigned t_code = temp.code();//the register number of temp.
-
-	  unsigned immr_bfm = 64 - 2 * out_code;
-	  unsigned imms_bfm = 1;
-	  __ Ldp(dst, temp, MemOperand(sp, offset));
-	  if(dst.IsRegister())
-	  {
-		  __ Bfm(taint_str1, xzr, immr_bfm, imms_bfm);
-		  __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
-	  }else if(dst.IsFpuRegister()){
-		  __ Bfm(taint_str2, xzr, immr_bfm, imms_bfm);
-		  __ Orr(taint_str2, taint_str2, Operand(temp, LSL, 2 * out_code));
-	  }
-	  cfi_.Restore(DWARFReg(dst));
-	  //cfi_.Restore(DWARFReg(temp)); there is no need for temp to generate cfi instruction.
-	  offset = size + 4;
-  }
-  //Taint end.
   DCHECK(registers.IsEmpty());
 }
 
-// Emit code that will create an activation on the stack.
 void Arm64Assembler::BuildFrame(size_t frame_size, ManagedRegister method_reg,
                                 const std::vector<ManagedRegister>& callee_save_regs,
                                 const ManagedRegisterEntrySpills& entry_spills) {
@@ -771,23 +714,11 @@ void Arm64Assembler::BuildFrame(size_t frame_size, ManagedRegister method_reg,
   // Increase frame to required size.
   DCHECK_ALIGNED(frame_size, kStackAlignment);
   DCHECK_GE(frame_size, core_reg_size + fp_reg_size + kArm64PointerSize);
-  /*Taint, change frame size. add the taint stack slot. 
-   *1 ?? not sure if the number of stack slots that after Method* should be 1.
-   */
-  //IncreaseFrameSize(frame_size);
-  unsigned core_reg_num = core_reg_list.Count();
-  unsigned fp_reg_num = fp_reg_list.Count();
-  IncreaseFrameSize(frame_size + 4 * (core_reg_num + fp_reg_num /*+ 1*/));
-  frame_size = frame_size + 4 * (core_reg_num + fp_reg_num);
+  IncreaseFrameSize(frame_size);
 
   // Save callee-saves.
-  /*Taint
-   * change the offset to be (core_reg_num * 4 + (frame_size - core_reg_size)). 4 represents the size of a stack slot.
-   */
-  size_t core_offset = frame_size - core_reg_size - 4 * core_reg_num;
-  size_t fp_offset = frame_size - core_reg_size - fp_reg_size - 4 * (core_reg_num + fp_reg_num);
-  SpillRegisters(core_reg_list, /* frame_size - core_reg_size*/ core_offset);
-  SpillRegisters(fp_reg_list, /*frame_size - core_reg_size - fp_reg_size*/ fp_offset);
+  SpillRegisters(core_reg_list, frame_size - core_reg_size);
+  SpillRegisters(fp_reg_list, frame_size - core_reg_size - fp_reg_size);
 
   // Note: This is specific to JNI method frame.
   // We will need to move TR(Caller saved in AAPCS) to ETR(Callee saved in AAPCS). The original
@@ -801,34 +732,25 @@ void Arm64Assembler::BuildFrame(size_t frame_size, ManagedRegister method_reg,
   StoreToOffset(X0, SP, 0);
 
   // Write out entry spills
-  /*Taint change offset.
-   *In every if statement, add "offset += 4" 
-   */
-  //int32_t offset = frame_size + kArm64PointerSize;
-  int32_t offset = frame_size + kArm64PointerSize + 4*(core_reg_num + fp_reg_num);
+  int32_t offset = frame_size + kArm64PointerSize;
   for (size_t i = 0; i < entry_spills.size(); ++i) {
     Arm64ManagedRegister reg = entry_spills.at(i).AsArm64();
     if (reg.IsNoRegister()) {
       // only increment stack offset.
       ManagedRegisterSpill spill = entry_spills.at(i);
       offset += spill.getSize();
-      offset += 4;//Taint
     } else if (reg.IsXRegister()) {
       StoreToOffset(reg.AsXRegister(), SP, offset);
       offset += 8;
-      offset += 4;//Taint
     } else if (reg.IsWRegister()) {
       StoreWToOffset(kStoreWord, reg.AsWRegister(), SP, offset);
       offset += 4;
-      offset += 4;//Taint
     } else if (reg.IsDRegister()) {
       StoreDToOffset(reg.AsDRegister(), SP, offset);
       offset += 8;
-      offset += 4;//Taint
     } else if (reg.IsSRegister()) {
       StoreSToOffset(reg.AsSRegister(), SP, offset);
       offset += 4;
-      offset += 4;//Taint
     }
   }
 }
@@ -850,12 +772,6 @@ void Arm64Assembler::RemoveFrame(size_t frame_size,
   size_t core_reg_size = core_reg_list.TotalSizeInBytes();
   size_t fp_reg_size = fp_reg_list.TotalSizeInBytes();
 
-  //Taint
-  //like BuildFrame
-  size_t core_reg_num = core_reg_list.Count();
-  size_t fp_reg_num = fp_reg_list.Count();
-  frame_size = frame_size + 4 * (core_reg_num + fp_reg_num);
-
   // For now we only check that the size of the frame is large enough to hold spills and method
   // reference.
   DCHECK_GE(frame_size, core_reg_size + fp_reg_size + kArm64PointerSize);
@@ -870,9 +786,8 @@ void Arm64Assembler::RemoveFrame(size_t frame_size,
   cfi_.RememberState();
 
   // Restore callee-saves.
-  //Taint. change the offset.
-  UnspillRegisters(core_reg_list, frame_size - core_reg_size - 4 * core_reg_num);
-  UnspillRegisters(fp_reg_list, frame_size - core_reg_size - fp_reg_size - 4 * (core_reg_num + fp_reg_num));
+  UnspillRegisters(core_reg_list, frame_size - core_reg_size);
+  UnspillRegisters(fp_reg_list, frame_size - core_reg_size - fp_reg_size);
 
   // Decrease frame size to start of callee saved regs.
   DecreaseFrameSize(frame_size);

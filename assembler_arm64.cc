@@ -20,6 +20,9 @@
 #include "offsets.h"
 #include "thread.h"
 
+// Taint
+#include "optimizing/code_generator_arm64.h"
+
 using namespace vixl;  // NOLINT(build/namespaces)
 
 namespace art {
@@ -652,6 +655,8 @@ static inline dwarf::Reg DWARFReg(CPURegister reg) {
 void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
   int size = registers.RegisterSizeInBytes();
   const Register sp = vixl_masm_->StackPointer();
+  // Taint : taints follow the spilled registers to the memory, so the register could only be moved as one register + one taint.
+  /*
   while (registers.Count() >= 2) {
     const CPURegister& dst0 = registers.PopLowestIndex();
     const CPURegister& dst1 = registers.PopLowestIndex();
@@ -668,12 +673,54 @@ void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
     ___ Str(dst0, MemOperand(sp, offset));
     cfi_.RelOffset(DWARFReg(dst0), offset);
   }
+  */
+
+  // Taint begin
+  Register taint_str1 = Register::XRegFromCode(taint_code1);
+  Register taint_str2 = Register::XRegFromCode(taint_code2);
+
+  while (!registers.IsEmpty()) {
+    const CPURegister& dst0 = registers.PopLowestIndex();
+    ___ Str(dst0, MemOperand(sp, offset));
+
+    UseScratchRegisterScope temps(vixl_masm_);
+    Register temp = temps.AcquireX();
+    unsigned in_code = dst0.code();
+
+    if (dst0.type() == 1) {  // this means that dst0 is kRegister
+           ___ Ubfm(temp, taint_str1, in_code * 2, (in_code * 2 + 1));
+    } else if (dst0.type() == 2) {  // this means that dst0 is a kVRegister/kFPRegister
+           ___ Ubfm(temp, taint_str2, in_code * 2, (in_code * 2 + 1));
+    }
+    ___ Str(temp, MemOperand(sp, offset + size));
+    cfi_.RelOffset(DWARFReg(dst0), offset);
+    cfi_.RelOffset(DWARFReg(temp), offset + size);
+    offset += 2 * size;
+
+    // Taint clear
+    ___ Mov(temp, 0);
+    if (in_code == 0) {
+            if (dst0.type() == 1)
+                    ___ Bfm(taint_str1, temp, 0, 1);
+            else if (dst0.type() == 2)
+                    ___ Bfm(taint_str2, temp, 0, 1);
+    } else {
+            if (dst0.type() == 1)
+                    ___ Bfm(taint_str1, temp, (64 - 2 * in_code), 1);
+            else if (dst0.type() == 2)
+                    ___ Bfm(taint_str2, temp, (64 - 2 * in_code), 1);
+    }
+  }
+  // Taint end
+
   DCHECK(registers.IsEmpty());
 }
 
 void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
   int size = registers.RegisterSizeInBytes();
   const Register sp = vixl_masm_->StackPointer();
+
+  /*
   while (registers.Count() >= 2) {
     const CPURegister& dst0 = registers.PopLowestIndex();
     const CPURegister& dst1 = registers.PopLowestIndex();
@@ -690,6 +737,47 @@ void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
     ___ Ldr(dst0, MemOperand(sp, offset));
     cfi_.Restore(DWARFReg(dst0));
   }
+  */
+
+  // Taint begin
+  Register taint_str1 = Register::XRegFromCode(taint_code1);
+  Register taint_str2 = Register::XRegFromCode(taint_code2);
+
+  while (!registers.IsEmpty()) {
+     const CPURegister& dst0 = registers.PopLowestIndex();
+     ___ Ldr(dst0, MemOperand(sp, offset));
+
+     UseScratchRegisterScope temps(vixl_masm_);
+     Register temp = temps.AcquireX();
+     unsigned code = dst0.code();
+
+     // Taint bit clear.
+     ___ Mov(temp, 0);
+     if (code == 0) {
+             if (dst0.type() == 1)
+                     ___ Bfm(taint_str1, temp, 0, 1);
+             else if (dst0.type() == 2)
+                     ___ Bfm(taint_str2, temp, 0, 1);
+     } else {
+             if (dst0.type() == 1)
+                     ___ Bfm(taint_str1, temp, (64 - 2 * code), 1);
+             else if (dst0.type() == 2)
+                     ___ Bfm(taint_str2, temp, (64 - 2 * code), 1);
+     }
+
+     // load the taint tag from memory to temp register
+     ___ Ldr(temp, MemOperand(sp, offset + size));
+     if (dst0.type() == 1)
+             ___ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * code));
+     else if (dst0.type() == 2)
+             ___ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * code));
+
+     cfi_.Restore(DWARFReg(dst0));
+     cfi_.Restore(DWARFReg(temp));
+     offset += 2 * size;
+  }
+  // Taint end
+
   DCHECK(registers.IsEmpty());
 }
 

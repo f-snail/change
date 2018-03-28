@@ -30,27 +30,26 @@ public final class Taint{
 		  the implementation is in optimizing compiler's intrinsic functions. 
 		  */
         public static native void addTaint(int val,int tag);
-		public static native int getTaint(int val);
-		public static native void addTaint(short val, int tag);
-		public static native int getTaint(short val);
-		public static native void addTaint(boolean val, int tag);
-        public static native int getTaint(boolean val);
-		public static native void addTaint(byte val, int tag);
-		public static native int getTaint(byte val);
-		public static native int getTaint();
-		public static native void addTaint(long val, int tag);
-		public static native int getTaint(long val);
-		public static native IntArray addTaint(IntArray val, int tag);
-		public static native int getTaint(IntArray val);
-		public static native ShortArray addTaint(ShortArray val, int tag);
-		public static native int getTaint(ShortArray val);
-		public static native ByteArray addTaint(ByteArray val, int tag);
-		public static native int getTaint(ByteArray val);
-		public static native CharArray addTaint(CharArray val, int tag);
-		public static native int getTaint(CharArray val);
-		public static native BooleanArray addTaint(BooleanArray val, int tag);
-		public static native int getTaint(BooleanArray val);
-		public static native LongArray addTaint(LongArray val, int tag);
-		public static native int getTaint(LongArray val);
-        }
+        public static native int getTaint(int val);
+        public static native void addTaint(short val, int tag);
+        public static native int getTaint(short val);
+        public static native void addTaint(boolean val, int tag);
+        public static native int getTaint(boolean val);       
+        public static native void addTaint(byte val, int tag);
+        public static native int getTaint(byte val);
+        public static native int getTaint();
+        public static native void addTaint(long val, int tag);
+        public static native int getTaint(long val);
+        public static native int[] addTaint(int[] val, int tag);
+        public static native int getTaint(int[] val);
+        public static native short[] addTaint(short[] val, int tag);
+        public static native int getTaint(short[] val);
+        public static native byte[] addTaint(byte[] val, int tag);
+        public static native int getTaint(byte[] val);
+        public static native char[] addTaint(char[] val, int tag);
+        public static native int getTaint(char[] val);
+        public static native boolean[] addTaint(boolean[] val, int tag);
+        public static native int getTaint(boolean[] val);
+        public static native long[] addTaint(long[] val, int tag);
+        public static native int getTaint(long[] val);
 }

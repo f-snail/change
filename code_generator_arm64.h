@@ -36,8 +36,8 @@ class CodeGeneratorARM64;
 #define CODEGENERAORARM64_H__
 /*Taint*/
 // unsigned taint_code = 16;
-static unsigned taint_code1 = 11;  // put the taint status of Registers
-static unsigned taint_code2 = 12;  // put the taint status of FPRegisters
+static unsigned taint_code1 = 22;  // put the taint status of Registers
+static unsigned taint_code2 = 23;  // put the taint status of FPRegisters
 // unsigned width = 2;  // the bitwise width of taint stored in register.
 /*Taint end*/
 #endif /* CODEGENERAORARM64_H__ */
@@ -59,7 +59,7 @@ static const vixl::Register kArtMethodRegister = vixl::x0;  // Method register o
 
 /*Taint begin*/
 #ifdef TAINT_TRACKING
-const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1, vixl::x11, vixl::x12);
+const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1, vixl::x22, vixl::x23);
 #else
 const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1);
 #endif

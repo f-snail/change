@@ -58,11 +58,11 @@ const vixl::Register tr = vixl::x18;                        // Thread Register
 static const vixl::Register kArtMethodRegister = vixl::x0;  // Method register on invoke.
 
 /*Taint begin*/
-#ifdef TAINT_TRACKING
-const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1, vixl::x22, vixl::x23);
-#else
+// #ifdef TAINT_TRACKING
+const vixl::CPURegList taint_reserved_core_registers(vixl::x22, vixl::x23);
+// #endif
+
 const vixl::CPURegList vixl_reserved_core_registers(vixl::ip0, vixl::ip1);
-#endif
 
 /*Taint add d16 as the taint storage register. - REMOVED*/
 const vixl::CPURegList vixl_reserved_fp_registers(vixl::d31);
@@ -80,15 +80,25 @@ const vixl::CPURegList runtime_reserved_core_registers(tr, vixl::lr);
                                                    Taint storage registers
                                                    vixl::x11.code(),
                                                    vixl::x12.code()); */
+/*Taint begin*/
+#ifdef TAINT_TRACKING
+vixl::CPURegList callee_saved_core_registers_old(vixl::CPURegister::kRegister,
+                vixl::kXRegSize,
+                vixl::x19.code(),
+                vixl::x30.code());
+const vixl::CPURegList callee_saved_core_registers = callee_saved_core_registers_old.Remove(taint_reserved_core_registers);
+#else
 const vixl::CPURegList callee_saved_core_registers(vixl::CPURegister::kRegister,
                 vixl::kXRegSize,
                 vixl::x19.code(),
                 vixl::x30.code());
+#endif
 
 const vixl::CPURegList callee_saved_fp_registers(vixl::CPURegister::kFPRegister,
                                                  vixl::kDRegSize,
                                                  vixl::d8.code(),
                                                  vixl::d15.code());
+
 Location ARM64ReturnLocation(Primitive::Type return_type);
 
 class SlowPathCodeARM64 : public SlowPathCode {

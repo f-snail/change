@@ -724,6 +724,10 @@ void CodeGeneratorARM64::SetupBlockedRegisters(bool is_baseline) const {
   //      d31       : VIXL fp temp.
   CPURegList reserved_core_registers = vixl_reserved_core_registers;
   reserved_core_registers.Combine(runtime_reserved_core_registers);
+  // Taint begin.
+  // Block the registers that are used for taint_str.
+  reserved_core_registers.Combine(taint_reserved_core_registers);
+  // Taint end
   while (!reserved_core_registers.IsEmpty()) {
     blocked_core_registers_[reserved_core_registers.PopLowestIndex().code()] = true;
   }

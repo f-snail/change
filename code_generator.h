@@ -388,8 +388,9 @@ class CodeGenerator {
 
   uint32_t GetCoreSpillSize() const {
     // Taint begin
-    // return POPCOUNT(core_spill_mask_) * GetWordSize();
-    return POPCOUNT(core_spill_mask_) * 2 * GetWordSize();
+    // no need to do this.
+    return POPCOUNT(core_spill_mask_) * GetWordSize();
+    // return POPCOUNT(core_spill_mask_) * 2 * GetWordSize();
     // Taint end
   }
 

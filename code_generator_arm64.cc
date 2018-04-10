@@ -590,6 +590,7 @@ void CodeGeneratorARM64::GenerateFrameEntry() {
     //      ...                       : reserved frame space.
     //      sp[0]                     : current method.
     // kArtMethodRegister = vixl::x0
+    // add taint storage registers between 'other preserved fp registers' and 'reserved frame space'.
     __ Str(kArtMethodRegister, MemOperand(sp, -frame_size, PreIndex));
     GetAssembler()->cfi().AdjustCFAOffset(frame_size);
     // Taint : taints follow the spilled registers to the memory and the implementation is in /utils/arm64/assembler_arm64.cc.
@@ -597,6 +598,10 @@ void CodeGeneratorARM64::GenerateFrameEntry() {
         frame_size - GetCoreSpillSize());
     GetAssembler()->SpillRegisters(GetFramePreservedFPRegisters(),
         frame_size - FrameEntrySpillSize());
+    // Taint
+    // store taint storage registers into memory, right after lr.
+    // TODO
+    __ Stp(x22, x23, MemOperand(sp, frame_size - FrameEntrySpillSize() - 2 * kArm64WordSize));
   }
 }
 
@@ -605,10 +610,14 @@ void CodeGeneratorARM64::GenerateFrameExit() {
   GetAssembler()->cfi().RememberState();
   if (!HasEmptyFrame()) {
     int frame_size = GetFrameSize();
+    // Taint: restore taint storage registers x22&x23
+    __ Ldp(x22, x23, MemOperand(sp, frame_size - FrameEntrySpillSize() - 2 * kArm64WordSize));
+    // Taint end
     GetAssembler()->UnspillRegisters(GetFramePreservedFPRegisters(),
         frame_size - FrameEntrySpillSize());
     GetAssembler()->UnspillRegisters(GetFramePreservedCoreRegisters(),
         frame_size - GetCoreSpillSize());
+    // Drop means  - Add(StackPointer(), StackPointer(), size)
     __ Drop(frame_size);
     GetAssembler()->cfi().AdjustCFAOffset(-frame_size);
   }
@@ -768,7 +777,7 @@ Location CodeGeneratorARM64::AllocateFreeRegister(Primitive::Type type) const {
 
 size_t CodeGeneratorARM64::SaveCoreRegister(size_t stack_index, uint32_t reg_id) {
   Register reg = Register(VIXLRegCodeFromART(reg_id), kXRegSize);
-  // use Stp to instead Str.
+  // Taint : use Stp to instead Str.
   // __ Str(reg, MemOperand(sp, stack_index));
 
   // Taint register -> stack
@@ -788,7 +797,7 @@ size_t CodeGeneratorARM64::SaveCoreRegister(size_t stack_index, uint32_t reg_id)
 
 size_t CodeGeneratorARM64::RestoreCoreRegister(size_t stack_index, uint32_t reg_id) {
   Register reg = Register(VIXLRegCodeFromART(reg_id), kXRegSize);
-  // use Ldp to instead Ldr.
+  // Taint : use Ldp to instead Ldr.
   // __ Ldr(reg, MemOperand(sp, stack_index));
 
   // Taint stack -> register

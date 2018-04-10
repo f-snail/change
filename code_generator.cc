@@ -259,6 +259,7 @@ void CodeGenerator::InitializeCodeGeneration(size_t number_of_spill_slots,
 	*/
 	/*changed code
 	 * change the stack size to be twice larger than original size.*/
+          // Taint
           SetFrameSize(RoundUp(
                                   (
                                    number_of_spill_slots * kVRegSize

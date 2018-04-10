@@ -932,7 +932,9 @@ void SlowPathCode::SaveLiveRegisters(CodeGenerator* codegen, LocationSummary* lo
   RegisterSet* register_set = locations->GetLiveRegisters();
   size_t stack_offset = codegen->GetFirstRegisterSlotInSlowPath();
   for (size_t i = 0, e = codegen->GetNumberOfCoreRegisters(); i < e; ++i) {
-    if (!codegen->IsCoreCalleeSaveRegister(i)) {
+    // Taint storage registers needs to be excluded, that is x22&x23.
+    // if (!codegen->IsCoreCalleeSaveRegister(i)) {
+    if (!codegen->IsCoreCalleeSaveRegister(i) && i != 22 && i != 23) {
       if (register_set->ContainsCoreRegister(i)) {
         // If the register holds an object, update the stack mask.
         if (locations->RegisterContainsObject(i)) {
@@ -966,7 +968,9 @@ void SlowPathCode::RestoreLiveRegisters(CodeGenerator* codegen, LocationSummary*
   RegisterSet* register_set = locations->GetLiveRegisters();
   size_t stack_offset = codegen->GetFirstRegisterSlotInSlowPath();
   for (size_t i = 0, e = codegen->GetNumberOfCoreRegisters(); i < e; ++i) {
-    if (!codegen->IsCoreCalleeSaveRegister(i)) {
+    // Taint storage.
+    // if (!codegen->IsCoreCalleeSaveRegister(i)) {
+    if (!codegen->IsCoreCalleeSaveRegister(i) && i != 22 && i != 23) {
       if (register_set->ContainsCoreRegister(i)) {
         DCHECK_LT(stack_offset, codegen->GetFrameSize() - codegen->FrameEntrySpillSize());
         // Taint begin

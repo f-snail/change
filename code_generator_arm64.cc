@@ -768,7 +768,8 @@ Location CodeGeneratorARM64::AllocateFreeRegister(Primitive::Type type) const {
 
 size_t CodeGeneratorARM64::SaveCoreRegister(size_t stack_index, uint32_t reg_id) {
   Register reg = Register(VIXLRegCodeFromART(reg_id), kXRegSize);
-  __ Str(reg, MemOperand(sp, stack_index));
+  // use Stp to instead Str.
+  // __ Str(reg, MemOperand(sp, stack_index));
 
   // Taint register -> stack
   Register taint_str = Register::XRegFromCode(taint_code1);
@@ -777,14 +778,18 @@ size_t CodeGeneratorARM64::SaveCoreRegister(size_t stack_index, uint32_t reg_id)
   UseScratchRegisterScope temps(GetVIXLAssembler());
   Register temp = temps.AcquireX();
   __ Ubfm(temp, taint_str, in_code * 2, (in_code * 2 + 1));
-  __ Str(temp, MemOperand(sp, stack_index + 8));
+  // __ Str(temp, MemOperand(sp, stack_index + 8));
+  __ Stp(reg, temp, MemOperand(sp, stack_index));
+  // TEST
+  // VLOG(TA64) << "In SaveCoreRegister(size_t stack_index, uint32_t reg_id), the stack_index is:" << stack_index;
   // Taint end
   return kArm64WordSize;
 }
 
 size_t CodeGeneratorARM64::RestoreCoreRegister(size_t stack_index, uint32_t reg_id) {
   Register reg = Register(VIXLRegCodeFromART(reg_id), kXRegSize);
-  __ Ldr(reg, MemOperand(sp, stack_index));
+  // use Ldp to instead Ldr.
+  // __ Ldr(reg, MemOperand(sp, stack_index));
 
   // Taint stack -> register
   Register taint_str = Register::XRegFromCode(taint_code1);
@@ -798,7 +803,8 @@ size_t CodeGeneratorARM64::RestoreCoreRegister(size_t stack_index, uint32_t reg_
           __ Bfm(taint_str, temp, 0, 1);
   else
           __ Bfm(taint_str, temp, (64 - 2 * out_code), 1);
-  __ Ldr(temp, MemOperand(sp, stack_index + 8));
+  // __ Ldr(temp, MemOperand(sp, stack_index + 8));
+  __ Ldp(reg, temp, MemOperand(sp, stack_index));
   __ Orr(taint_str, taint_str, Operand(temp, LSL, 2 * out_code));
   // Taint end
 

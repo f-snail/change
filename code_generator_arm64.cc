@@ -601,7 +601,21 @@ void CodeGeneratorARM64::GenerateFrameEntry() {
     // Taint
     // store taint storage registers into memory, right after lr.
     // TODO
-    __ Stp(x22, x23, MemOperand(sp, frame_size - FrameEntrySpillSize() - 2 * kArm64WordSize));
+    Register taint_str1 = Register::XRegFromCode(taint_code1);
+    Register taint_str2 = Register::XRegFromCode(taint_code2);
+    UseScratchRegisterScope temps(masm);
+    Register temp = temps.AcquireX();
+    __ Mov(temp, 0);
+    // Clear the taint tag of x0&d0 before taint_str is stored into memory.
+    // s>=r, then xd<s-r:0> = xn<s:r>, that is, taint_str<0> = temp<0>
+    __ Bfm(taint_str1, temp, 0, 1);
+    __ Bfm(taint_str2, temp, 0, 1);
+    __ Stp(taint_str1, taint_str2, MemOperand(sp, frame_size - FrameEntrySpillSize() - 2 * kArm64WordSize));
+    // Taint : clear the taint bits in taint_str1 except x1-x7(the parameters register)
+    // Bfm xd,xn,#r,#s; s<r, then xd<64+s-r,64-r> = xn<s:0>, that is, taint_str<63:14> = temp<49:0>
+    __ Bfm(taint_str1, temp, 50, 49);
+    // Taint : clear the taint bits in taint_str2 except d0-d7.
+    __ Bfm(taint_str2, temp, 50, 49);
   }
 }
 
@@ -611,8 +625,21 @@ void CodeGeneratorARM64::GenerateFrameExit() {
   if (!HasEmptyFrame()) {
     int frame_size = GetFrameSize();
     // Taint: restore taint storage registers x22&x23
-    __ Ldp(x22, x23, MemOperand(sp, frame_size - FrameEntrySpillSize() - 2 * kArm64WordSize));
+    Register taint_str1 = Register::XRegFromCode(taint_code1);
+    Register taint_str2 = Register::XRegFromCode(taint_code2);
+    UseScratchRegisterScope temps(GetVIXLAssembler());
+    // scratch registers to save the componet of intra-method taint_str.
+    Register temp = temps.AcquireX();
+    // move the taint of x0 into temp1<1:0>
+    __ Ubfm(temp, taint_str1, 0, 1);
+    // move the taint of d0 into temp1<3:2>
+    __ Bfm(temp, taint_str2, 62, 1);
+    __ Ldp(taint_str1, taint_str2, MemOperand(sp, frame_size - FrameEntrySpillSize() - 2 * kArm64WordSize));
+    // move the taint tag back into taint_str.
+    __ Bfm(taint_str1, temp, 0, 1);
+    __ Bfm(taint_str2, temp, 62, 1);
     // Taint end
+
     GetAssembler()->UnspillRegisters(GetFramePreservedFPRegisters(),
         frame_size - FrameEntrySpillSize());
     GetAssembler()->UnspillRegisters(GetFramePreservedCoreRegisters(),

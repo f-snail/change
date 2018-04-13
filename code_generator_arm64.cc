@@ -819,7 +819,7 @@ size_t CodeGeneratorARM64::SaveCoreRegister(size_t stack_index, uint32_t reg_id)
   // TEST
   // VLOG(TA64) << "In SaveCoreRegister(size_t stack_index, uint32_t reg_id), the stack_index is:" << stack_index;
   // Taint end
-  return kArm64WordSize;
+  return 2 * kArm64WordSize;
 }
 
 size_t CodeGeneratorARM64::RestoreCoreRegister(size_t stack_index, uint32_t reg_id) {
@@ -844,7 +844,7 @@ size_t CodeGeneratorARM64::RestoreCoreRegister(size_t stack_index, uint32_t reg_
   __ Orr(taint_str, taint_str, Operand(temp, LSL, 2 * out_code));
   // Taint end
 
-  return kArm64WordSize;
+  return 2 * kArm64WordSize;
 }
 
 size_t CodeGeneratorARM64::SaveFloatingPointRegister(size_t stack_index, uint32_t reg_id) {

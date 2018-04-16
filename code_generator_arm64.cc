@@ -813,6 +813,7 @@ size_t CodeGeneratorARM64::SaveCoreRegister(size_t stack_index, uint32_t reg_id)
 
   UseScratchRegisterScope temps(GetVIXLAssembler());
   Register temp = temps.AcquireX();
+  // move the taint tag(<in_code*2+1:in_code*2>) of reg<in_code> into temp<1:0>
   __ Ubfm(temp, taint_str, in_code * 2, (in_code * 2 + 1));
   // __ Str(temp, MemOperand(sp, stack_index + 8));
   __ Stp(reg, temp, MemOperand(sp, stack_index));

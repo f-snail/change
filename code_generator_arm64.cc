@@ -482,6 +482,7 @@ CodeGeneratorARM64::CodeGeneratorARM64(HGraph* graph,
 */
 // void CodeGeneratorARM64::Taint_Clear(Register dst, Register taint_str) {
 // static void Taint_Clear(Register dst, Register taint_str) {
+// clear register dst's taint tag.
 #define TAINT_CLEAR(dst, taint_str)  \
         unsigned out_code = dst.code();  \
         UseScratchRegisterScope temps(GetVIXLAssembler());  \
@@ -494,8 +495,16 @@ CodeGeneratorARM64::CodeGeneratorARM64(HGraph* graph,
         else  \
               __ Bfm(taint_str, temp, immr_bfm, imms_bfm);
 
+// clear the taint tag of 'out' in taint_str
+#define CODE_CLEAR(taint_str, code)  \
+__ Mov(temp, 0);  \
+if (code == 0)  \
+  __ Bfm(taint_str, temp, 0, 1);  \
+else  \
+  __ Bfm(taint_str, temp, 64 - 2 * code, 1);
 
-#define ADD_TAINT_LOAD(taint_str, in_code, out_code)  \
+// clear the taint tag of 'out' in taint_str, and move the taint tag of 'in' to out.
+#define CLEAR_ADD(taint_str, in_code, out_code)  \
 __ Mov(temp, 0);  \
 if (out_code == 0)  \
   __ Bfm(taint_str, temp, 0, 1);  \
@@ -971,7 +980,13 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
             Register temp1 = temps.AcquireX();
             in_code = temp1.code();
             __ Mov(temp, 0);
-            __ Ldr(temp1, MemOperand(sp, source.GetStackIndex() + 1));
+            // ERROR
+            // __ Ldr(temp1, MemOperand(sp, source.GetStackIndex() + 1));
+            // Taint : load the taint tag from stack into temp1, lean it from GenerateFrameEntry(). Load the taint tag into WRegister, reduce the size of taint tag to 32 bits.
+            if (source.IsStackSlot())
+                    __ Ldr(temp1.W(), MemOperand(sp, source.GetStackIndex() + 4));
+            else if (source.IsDoubleStackSlot())
+                    __ Ldr(temp1.W(), MemOperand(sp, source.GetStackIndex() + 8));
             if (destination.IsRegister()) {
                     if (out_code == 0)
                             __ Bfm(taint_str1, temp, 0, imms_bfm);
@@ -998,9 +1013,8 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
               UseScratchRegisterScope temps(GetVIXLAssembler());
               in_code = RegisterFrom(source, type).code();
               DCHECK_NE(static_cast<int>(in_code), 63);  // not supposed to be sp,in vixl,the code of SP is 63.
-              temps.Exclude(Register(dst), RegisterFrom(source, type));
               Register temp = temps.AcquireX();
-              ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+              CLEAR_ADD(taint_str1, in_code, out_code)
               // Taint end
       } else {
         DCHECK(destination.IsFpuRegister());
@@ -1010,7 +1024,7 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
         in_code = FPRegisterFrom(source, type).code();
         DCHECK_NE(static_cast<int>(in_code), 63);
         Register temp = temps.AcquireX();
-        ADD_TAINT_LOAD(taint_str2, in_code, out_code)
+        CLEAR_ADD(taint_str2, in_code, out_code)
         // Taint end
       }
     }
@@ -1049,7 +1063,13 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
               else
                       __ Bfm(taint_str2, temp0, immr_bfm, imms_bfm);
       }
-      __ Str(temp.W(), MemOperand(sp, source.GetStackIndex() + 1));
+      // Taint : load dst's taint tag into the stack, right after dst
+      if (destination.IsStackSlot())
+              __ Str(temp.W(), MemOperand(sp, source.GetStackIndex() + 4));
+      else if (destination.IsDoubleStackSlot())
+              __ Str(temp.W(), MemOperand(sp, source.GetStackIndex() + 8));
+      // wrong version
+      // __ Str(temp, MemOperand(sp, source.GetStackIndex() + 1));
       // VLOG(TA64) << "MoveLocation()/destination is a stack slot: the used scratch registers are: " << temp.code() << " and " << temp0.code();
       // Taint end
     } else if (source.IsConstant()) {
@@ -1070,18 +1090,35 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
       // VLOG(TA64) << "'MoveLocation()/source is a constant' call MoveConstant()";
       MoveConstant(temp, src_cst);
       __ Str(temp, StackOperandFrom(destination));
-    } else {
+    } else {  // source is in StackSlot
       DCHECK(source.IsStackSlot() || source.IsDoubleStackSlot());
       DCHECK(source.IsDoubleStackSlot() == destination.IsDoubleStackSlot());
       UseScratchRegisterScope temps(GetVIXLAssembler());
       // There is generally less pressure on FP registers.
       FPRegister temp = destination.IsDoubleStackSlot() ? temps.AcquireD() : temps.AcquireS();
+      /* original version
       __ Ldr(temp, StackOperandFrom(source));
       __ Str(temp, StackOperandFrom(destination));
-      // Taint begin
+      */
+      // Taint
       Register temp1 = temps.AcquireW();
-      __ Ldr(temp1, MemOperand(sp, source.GetStackIndex() + 1));
-      __ Str(temp1, MemOperand(sp, destination.GetStackIndex() + 1));
+      __ Ldp(temp, temp1, StackOperandFrom(source));
+      __ Stp(temp, temp1, StackOperandFrom(destination));
+      /*
+      if (source.IsStackSlot()) {
+              __ Ldr(temp1.W(), MemOperand(sp, source.GetStackIndex() + 4));
+              __ Stp(temp, temp1, StackOperandFrom(destination));
+              // __ Str(temp, StackOperandFrom(destination));
+              // __ Str(temp1, MemOperand(sp, destination.GetStackIndex() + 4));
+      } else if (source.IsDoubleStackSlot()) {
+              __ Ldr(temp1.W(), MemOperand(sp, source.GetStackIndex() + 8));
+              // __ Str(temp, StackOperandFrom(destination));
+              // __ Str(temp1, MemOperand(sp, destination.GetStackIndex() + 8));
+      }
+      */
+      // wrong version
+      // __ Ldr(temp1, MemOperand(sp, source.GetStackIndex() + 1));
+      // __ Str(temp1, MemOperand(sp, destination.GetStackIndex() + 1));
       // Taint end
     }
   }
@@ -1091,51 +1128,89 @@ void CodeGeneratorARM64::Load(Primitive::Type type,
                               CPURegister dst,
                               const MemOperand& src) {
         // Taint
-        Register obj = src.base();
         Register taint_str1 = Register::XRegFromCode(taint_code1);  // integral taint
         Register taint_str2 = Register::XRegFromCode(taint_code2);  // floating-point register taint
         UseScratchRegisterScope temps(GetVIXLAssembler());
         unsigned out_code = dst.code();
-        unsigned in_code = obj.code();
-        DCHECK(in_code != 63 && out_code != 63);
         Register temp = temps.AcquireX();
+
         // Taint
         switch (type) {
-    case Primitive::kPrimBoolean:
+    case Primitive::kPrimBoolean: {
+      // Ldrb calculates an address from a base register value and an offset register value, loads a byte from memory, zero-extends it, and writes it to a WRegister.
       __ Ldrb(Register(dst), src);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      MemOperand src_taint = src;
+      // Boolean occupies 8 bits, that is 1 byte.
+      src_taint.AddOffset(1);
+      CODE_CLEAR(taint_str1, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
               break;
-    case Primitive::kPrimByte:
+                                  }
+    case Primitive::kPrimByte: {
+      // loads a byte from memory, sign-extends it to either 32 bits or 64 bits, and writes the result to a register.
       __ Ldrsb(Register(dst), src);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      MemOperand src_taint = src;
+      src_taint.AddOffset(1);
+      CODE_CLEAR(taint_str1, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
               break;
-    case Primitive::kPrimShort:
+                               }
+    case Primitive::kPrimShort: {
+      // loads a halfword from memory, sign-extends it to 32 bits or 64 bits, and writes the result to a register.
       __ Ldrsh(Register(dst), src);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      MemOperand src_taint = src;
+      src_taint.AddOffset(2);
+      CODE_CLEAR(taint_str1, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
               break;
-    case Primitive::kPrimChar:
+                                }
+    case Primitive::kPrimChar: {
+      // loads a halfword from memory, zero-extends it, and writes it to a register.
       __ Ldrh(Register(dst), src);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      MemOperand src_taint = src;
+      src_taint.AddOffset(2);
+      CODE_CLEAR(taint_str1, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
               break;
+                               }
     case Primitive::kPrimInt:
     case Primitive::kPrimNot:
     case Primitive::kPrimLong:
     case Primitive::kPrimFloat:
-    case Primitive::kPrimDouble:
+    case Primitive::kPrimDouble: {
       DCHECK_EQ(dst.Is64Bits(), Primitive::Is64BitType(type));
-      __ Ldr(dst, src);
+      // original version
+      // __ Ldr(dst, src);
+
       // Taint
+      if (type == Primitive::kPrimFloat || type == Primitive::kPrimDouble) {
+              CODE_CLEAR(taint_str2, out_code)
+      } else {
+              CODE_CLEAR(taint_str1, out_code)
+      }
+      __ Ldp(dst, temp.W(), src);
+      if (dst.type() == CPURegister::kRegister)
+              __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+      else if (dst.type() == CPURegister::kFPRegister)
+              __ Orr(taint_str2, taint_str2, Operand(temp, LSL, 2 * out_code));
+      /*
       if (dst.type() == CPURegister::kRegister) {
               ADD_TAINT_LOAD(taint_str1, in_code, out_code)
       } else if (dst.type() == CPURegister::kFPRegister) {
               ADD_TAINT_LOAD(taint_str2, in_code, out_code)
       }
+      */
       // Taint
       break;
+                                 }
     case Primitive::kPrimVoid:
       LOG(FATAL) << "Unreachable type " << type;
   }
@@ -1171,7 +1246,7 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       __ Ldarb(Register(dst), base);
       MaybeRecordImplicitNullCheck(instruction);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      CLEAR_ADD(taint_str1, in_code, out_code)
               break;
                                   }
     case Primitive::kPrimByte: {
@@ -1179,14 +1254,14 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       MaybeRecordImplicitNullCheck(instruction);
       __ Sbfx(Register(dst), Register(dst), 0, Primitive::ComponentSize(type) * kBitsPerByte);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      CLEAR_ADD(taint_str1, in_code, out_code)
               break;
                                }
     case Primitive::kPrimChar : {
       __ Ldarh(Register(dst), base);
       MaybeRecordImplicitNullCheck(instruction);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      CLEAR_ADD(taint_str1, in_code, out_code)
       break;
                                 }
     case Primitive::kPrimShort: {
@@ -1194,7 +1269,7 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       MaybeRecordImplicitNullCheck(instruction);
       __ Sbfx(Register(dst), Register(dst), 0, Primitive::ComponentSize(type) * kBitsPerByte);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      CLEAR_ADD(taint_str1, in_code, out_code)
               break;
                                 }
     case Primitive::kPrimInt:
@@ -1204,7 +1279,7 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       __ Ldar(Register(dst), base);
       MaybeRecordImplicitNullCheck(instruction);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      CLEAR_ADD(taint_str1, in_code, out_code)
               break;
                                }
     case Primitive::kPrimFloat:
@@ -1217,7 +1292,7 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       MaybeRecordImplicitNullCheck(instruction);
       __ Fmov(FPRegister(dst), temp1);
       // Taint
-      ADD_TAINT_LOAD(taint_str2, in_code, out_code)
+      CLEAR_ADD(taint_str2, in_code, out_code)
               break;
     }
     case Primitive::kPrimVoid:
@@ -1229,40 +1304,54 @@ void CodeGeneratorARM64::Store(Primitive::Type type,
                                CPURegister src,
                                const MemOperand& dst) {
         // Taint
-        Register obj = dst.base();
         Register taint_str1 = Register::XRegFromCode(taint_code1);  // integral taint
         Register taint_str2 = Register::XRegFromCode(taint_code2);  // floating-point register taint
         UseScratchRegisterScope temps(GetVIXLAssembler());
-        unsigned out_code = obj.code();
         unsigned in_code = src.code();
-        DCHECK(in_code != 63 && out_code != 63);
         Register temp = temps.AcquireX();
         // Taint
   switch (type) {
     case Primitive::kPrimBoolean:
-    case Primitive::kPrimByte:
+    case Primitive::kPrimByte: {
       __ Strb(Register(src), dst);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      MemOperand dst_taint = dst;
+      dst_taint.AddOffset(1);
+      __ Ubfm(temp, taint_str1, in_code * 2, (in_code * 2 + 1));
+      __ Str(temp.W(), dst_taint);
+      CODE_CLEAR(taint_str1, in_code)
               break;
+                               }
     case Primitive::kPrimChar:
-    case Primitive::kPrimShort:
+    case Primitive::kPrimShort: {
       __ Strh(Register(src), dst);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      MemOperand dst_taint = dst;
+      dst_taint.AddOffset(2);
+      __ Ubfm(temp, taint_str1, in_code * 2, (in_code * 2 + 1));
+      __ Str(temp.W(), dst_taint);
+      CODE_CLEAR(taint_str1, in_code)
               break;
+                                }
     case Primitive::kPrimInt:
     case Primitive::kPrimNot:
     case Primitive::kPrimLong:
     case Primitive::kPrimFloat:
     case Primitive::kPrimDouble:
       DCHECK_EQ(src.Is64Bits(), Primitive::Is64BitType(type));
-      __ Str(src, dst);
+      /* original version
+       *__ Str(src, dst);
+       */
       // Taint
-      if (obj.type() == CPURegister::kRegister) {
-              ADD_TAINT_LOAD(taint_str1, in_code, out_code)
-      } else if (obj.type() == CPURegister::kFPRegister) {
-              ADD_TAINT_LOAD(taint_str2, in_code, out_code)
+      if (type == Primitive::kPrimFloat || type == Primitive::kPrimDouble)
+              __ Ubfm(temp, taint_str2, in_code * 2, (in_code * 2 + 1));
+      else
+              __ Ubfm(temp, taint_str1, in_code * 2, (in_code * 2 + 1));
+      __ Stp(src, temp, dst);
+      if (type == Primitive::kPrimFloat || type == Primitive::kPrimDouble) {
+              CODE_CLEAR(taint_str2, in_code)
+      } else {
+              CODE_CLEAR(taint_str1, in_code)
       }
       // Taint
       break;
@@ -1298,14 +1387,14 @@ void CodeGeneratorARM64::StoreRelease(Primitive::Type type,
     case Primitive::kPrimByte: {
       __ Stlrb(Register(src), base);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      CLEAR_ADD(taint_str1, in_code, out_code)
               break;
                                }
     case Primitive::kPrimChar:
     case Primitive::kPrimShort: {
       __ Stlrh(Register(src), base);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      CLEAR_ADD(taint_str1, in_code, out_code)
               break;
                                 }
     case Primitive::kPrimInt:
@@ -1314,7 +1403,7 @@ void CodeGeneratorARM64::StoreRelease(Primitive::Type type,
       DCHECK_EQ(src.Is64Bits(), Primitive::Is64BitType(type));
       __ Stlr(Register(src), base);
       // Taint
-      ADD_TAINT_LOAD(taint_str1, in_code, out_code)
+      CLEAR_ADD(taint_str1, in_code, out_code)
               break;
                                }
     case Primitive::kPrimFloat:
@@ -1326,7 +1415,7 @@ void CodeGeneratorARM64::StoreRelease(Primitive::Type type,
       __ Fmov(temp1, FPRegister(src));
       __ Stlr(temp1, base);
       // Taint
-      ADD_TAINT_LOAD(taint_str2, in_code, out_code)
+      CLEAR_ADD(taint_str2, in_code, out_code)
       // Taint end
       break;
     }
@@ -1738,7 +1827,7 @@ void InstructionCodeGeneratorARM64::HandleShift(HBinaryOperation* instr) {
         // this scope is necessary
         UseScratchRegisterScope temps(codegen_->GetVIXLAssembler());
         Register temp = temps.AcquireX();
-        ADD_TAINT_LOAD(taint_str, in_code0, out_code)
+        CLEAR_ADD(taint_str, in_code0, out_code)
         // Taint end
 #endif
       } else {
@@ -1846,7 +1935,7 @@ void InstructionCodeGeneratorARM64::VisitArrayGet(HArrayGet* instruction) {
     UseScratchRegisterScope temps_t(masm);
     Register taint_str = Register::XRegFromCode(taint_code1);
     Register temp = temps_t.AcquireX();
-    ADD_TAINT_LOAD(taint_str, obj.code(), temp1.code())
+    CLEAR_ADD(taint_str, obj.code(), temp1.code())
     // Taint end
     }
 
@@ -1932,7 +2021,7 @@ void InstructionCodeGeneratorARM64::VisitArraySet(HArraySet* instruction) {
         UseScratchRegisterScope temps_t(masm);
         Register taint_str = Register::XRegFromCode(taint_code1);
         Register temp = temps_t.AcquireX();
-        ADD_TAINT_LOAD(taint_str, obj.code(), temp1.code())
+        CLEAR_ADD(taint_str, obj.code(), temp1.code())
         // Taint
         }
 #endif
@@ -2865,7 +2954,7 @@ void InstructionCodeGeneratorARM64::VisitNeg(HNeg* neg) {
 
 #ifdef TAINT_TRACKING
               Register temp = temps.AcquireX();
-              ADD_TAINT_LOAD(taint_str, in_code, out_code)
+              CLEAR_ADD(taint_str, in_code, out_code)
 #endif
       }
       /*Taint end*/
@@ -2990,7 +3079,7 @@ void InstructionCodeGeneratorARM64::VisitNot(HNot* instruction) {
               unsigned in_code = in.code();
               DCHECK(in_code != 63 && out_code != 63);
               Register temp = temps.AcquireX();
-              ADD_TAINT_LOAD(taint_str, in_code, out_code)
+              CLEAR_ADD(taint_str, in_code, out_code)
       }
       /*Taint end*/
 
@@ -3021,7 +3110,7 @@ void InstructionCodeGeneratorARM64::VisitBooleanNot(HBooleanNot* instruction) {
 
         Register temp = temps.AcquireX();
         // BFM clear bits.
-        ADD_TAINT_LOAD(taint_str, in_code, out_code)
+        CLEAR_ADD(taint_str, in_code, out_code)
         /*Taint end*/
 }
 

@@ -1187,16 +1187,20 @@ void CodeGeneratorARM64::Load(Primitive::Type type,
     case Primitive::kPrimFloat:
     case Primitive::kPrimDouble: {
       DCHECK_EQ(dst.Is64Bits(), Primitive::Is64BitType(type));
-      // original version
-      // __ Ldr(dst, src);
+      __ Ldr(dst, src);
 
       // Taint
+      MemOperand src_taint = src;
+      if (type == Primitive::kPrimDouble || type == Primitive::kPrimDouble)
+              src_taint.AddOffset(8);
+      else
+              src_taint.AddOffset(4);
       if (type == Primitive::kPrimFloat || type == Primitive::kPrimDouble) {
               CODE_CLEAR(taint_str2, out_code)
       } else {
               CODE_CLEAR(taint_str1, out_code)
       }
-      __ Ldp(dst, temp.W(), src);
+      __ Ldr(temp.W(), src);
       if (dst.type() == CPURegister::kRegister)
               __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
       else if (dst.type() == CPURegister::kFPRegister)
@@ -1235,33 +1239,44 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
   // Taint
   Register taint_str1 = Register::XRegFromCode(taint_code1);
   Register taint_str2 = Register::XRegFromCode(taint_code2);
-  Register src_r = src.base();
   unsigned out_code = dst.code();
-  unsigned in_code = src_r.code();
-  DCHECK(in_code != 63 && out_code != 63);
   Register temp = temps.AcquireX();
 
   switch (type) {
     case Primitive::kPrimBoolean: {
+      // Ldarb : derives an address from a base register value, loads a byte from memory, zero-extends it and writes it to a register.
       __ Ldarb(Register(dst), base);
       MaybeRecordImplicitNullCheck(instruction);
       // Taint
-      CLEAR_ADD(taint_str1, in_code, out_code)
+      MemOperand src_taint = src;
+      src_taint.AddOffset(1);
+      CODE_CLEAR(taint_str1, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
               break;
                                   }
     case Primitive::kPrimByte: {
       __ Ldarb(Register(dst), base);
       MaybeRecordImplicitNullCheck(instruction);
+      // Sbfx : extracts any number of adjacent bits at any position from a register, sign-extends them to the size of the register, and writes the result to the destination register.
       __ Sbfx(Register(dst), Register(dst), 0, Primitive::ComponentSize(type) * kBitsPerByte);
       // Taint
-      CLEAR_ADD(taint_str1, in_code, out_code)
+      MemOperand src_taint = src;
+      src_taint.AddOffset(1);
+      CODE_CLEAR(taint_str1, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
               break;
                                }
     case Primitive::kPrimChar : {
       __ Ldarh(Register(dst), base);
       MaybeRecordImplicitNullCheck(instruction);
       // Taint
-      CLEAR_ADD(taint_str1, in_code, out_code)
+      MemOperand src_taint = src;
+      src_taint.AddOffset(2);
+      CODE_CLEAR(taint_str1, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
       break;
                                 }
     case Primitive::kPrimShort: {
@@ -1269,7 +1284,11 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       MaybeRecordImplicitNullCheck(instruction);
       __ Sbfx(Register(dst), Register(dst), 0, Primitive::ComponentSize(type) * kBitsPerByte);
       // Taint
-      CLEAR_ADD(taint_str1, in_code, out_code)
+      MemOperand src_taint = src;
+      src_taint.AddOffset(2);
+      CODE_CLEAR(taint_str1, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
               break;
                                 }
     case Primitive::kPrimInt:
@@ -1279,7 +1298,14 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       __ Ldar(Register(dst), base);
       MaybeRecordImplicitNullCheck(instruction);
       // Taint
-      CLEAR_ADD(taint_str1, in_code, out_code)
+      MemOperand src_taint = src;
+      if (type == Primitive::kPrimLong)
+              src_taint.AddOffset(8);
+      else
+              src_taint.AddOffset(4);
+      CODE_CLEAR(taint_str1, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
               break;
                                }
     case Primitive::kPrimFloat:
@@ -1292,13 +1318,27 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       MaybeRecordImplicitNullCheck(instruction);
       __ Fmov(FPRegister(dst), temp1);
       // Taint
-      CLEAR_ADD(taint_str2, in_code, out_code)
+      MemOperand src_taint = src;
+      if (type == Primitive::kPrimDouble)
+              src_taint.AddOffset(8);
+      else
+              src_taint.AddOffset(4);
+      CODE_CLEAR(taint_str2, out_code)
+      __ Ldr(temp.W(), src_taint);
+      __ Orr(taint_str2, taint_str2, Operand(temp, LSL, 2 * out_code));
               break;
     }
     case Primitive::kPrimVoid:
       LOG(FATAL) << "Unreachable type " << type;
   }
 }
+
+#define STORE_TAINT(taint_str, code, offset)  \
+MemOperand dst_taint = dst;  \
+dst_taint.AddOffset(offset);  \
+__ Ubfm(temp, taint_str, code * 2, (code * 2 + 1));  \
+__ Str(temp.W(), dst_taint);  \
+CODE_CLEAR(taint_str, code)
 
 void CodeGeneratorARM64::Store(Primitive::Type type,
                                CPURegister src,
@@ -1315,39 +1355,34 @@ void CodeGeneratorARM64::Store(Primitive::Type type,
     case Primitive::kPrimByte: {
       __ Strb(Register(src), dst);
       // Taint
-      MemOperand dst_taint = dst;
-      dst_taint.AddOffset(1);
-      __ Ubfm(temp, taint_str1, in_code * 2, (in_code * 2 + 1));
-      __ Str(temp.W(), dst_taint);
-      CODE_CLEAR(taint_str1, in_code)
+      STORE_TAINT(taint_str1, in_code, 1)
               break;
                                }
     case Primitive::kPrimChar:
     case Primitive::kPrimShort: {
       __ Strh(Register(src), dst);
       // Taint
-      MemOperand dst_taint = dst;
-      dst_taint.AddOffset(2);
-      __ Ubfm(temp, taint_str1, in_code * 2, (in_code * 2 + 1));
-      __ Str(temp.W(), dst_taint);
-      CODE_CLEAR(taint_str1, in_code)
+      STORE_TAINT(taint_str1, in_code, 2)
               break;
                                 }
     case Primitive::kPrimInt:
     case Primitive::kPrimNot:
     case Primitive::kPrimLong:
     case Primitive::kPrimFloat:
-    case Primitive::kPrimDouble:
+    case Primitive::kPrimDouble: {
       DCHECK_EQ(src.Is64Bits(), Primitive::Is64BitType(type));
-      /* original version
-       *__ Str(src, dst);
-       */
+      __ Str(src, dst);
       // Taint
+      MemOperand dst_taint = dst;
+      if (type == Primitive::kPrimDouble || type == Primitive::kPrimLong)
+              dst_taint.AddOffset(8);
+      else
+              dst_taint.AddOffset(4);
       if (type == Primitive::kPrimFloat || type == Primitive::kPrimDouble)
               __ Ubfm(temp, taint_str2, in_code * 2, (in_code * 2 + 1));
       else
               __ Ubfm(temp, taint_str1, in_code * 2, (in_code * 2 + 1));
-      __ Stp(src, temp, dst);
+      __ Str(temp.W(), dst_taint);
       if (type == Primitive::kPrimFloat || type == Primitive::kPrimDouble) {
               CODE_CLEAR(taint_str2, in_code)
       } else {
@@ -1355,6 +1390,7 @@ void CodeGeneratorARM64::Store(Primitive::Type type,
       }
       // Taint
       break;
+                                 }
     case Primitive::kPrimVoid:
       LOG(FATAL) << "Unreachable type " << type;
   }
@@ -1378,8 +1414,6 @@ void CodeGeneratorARM64::StoreRelease(Primitive::Type type,
   Register taint_str1 = Register::XRegFromCode(taint_code1);
   Register taint_str2 = Register::XRegFromCode(taint_code2);
   unsigned in_code = src.code();
-  unsigned out_code = dst.base().code();
-  DCHECK(in_code != 63 && out_code != 63);
   Register temp = temps.AcquireX();
 
   switch (type) {
@@ -1387,14 +1421,14 @@ void CodeGeneratorARM64::StoreRelease(Primitive::Type type,
     case Primitive::kPrimByte: {
       __ Stlrb(Register(src), base);
       // Taint
-      CLEAR_ADD(taint_str1, in_code, out_code)
+      STORE_TAINT(taint_str1, in_code, 1)
               break;
                                }
     case Primitive::kPrimChar:
     case Primitive::kPrimShort: {
       __ Stlrh(Register(src), base);
       // Taint
-      CLEAR_ADD(taint_str1, in_code, out_code)
+      STORE_TAINT(taint_str1, in_code, 2)
               break;
                                 }
     case Primitive::kPrimInt:
@@ -1403,7 +1437,14 @@ void CodeGeneratorARM64::StoreRelease(Primitive::Type type,
       DCHECK_EQ(src.Is64Bits(), Primitive::Is64BitType(type));
       __ Stlr(Register(src), base);
       // Taint
-      CLEAR_ADD(taint_str1, in_code, out_code)
+      MemOperand dst_taint = dst;
+      if (type == Primitive::kPrimLong)
+              dst_taint.AddOffset(8);
+      else
+              dst_taint.AddOffset(4);
+      __ Ubfm(temp, taint_str1, in_code * 2, (in_code * 2 + 1));
+      __ Str(temp.W(), dst_taint);
+      CODE_CLEAR(taint_str1, in_code)
               break;
                                }
     case Primitive::kPrimFloat:
@@ -1415,7 +1456,14 @@ void CodeGeneratorARM64::StoreRelease(Primitive::Type type,
       __ Fmov(temp1, FPRegister(src));
       __ Stlr(temp1, base);
       // Taint
-      CLEAR_ADD(taint_str2, in_code, out_code)
+      MemOperand dst_taint = dst;
+      if (type == Primitive::kPrimDouble)
+              dst_taint.AddOffset(8);
+      else
+              dst_taint.AddOffset(4);
+      __ Ubfm(temp, taint_str2, in_code * 2, (in_code * 2 + 1));
+      __ Str(temp.W(), dst_taint);
+      CODE_CLEAR(taint_str2, in_code)
       // Taint end
       break;
     }

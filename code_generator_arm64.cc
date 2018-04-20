@@ -677,8 +677,10 @@ void CodeGeneratorARM64::Move(HInstruction* instruction,
   Primitive::Type type = instruction->GetType();
   DCHECK_NE(type, Primitive::kPrimVoid);
 
+  // Taint
   Register taint_str1 = Register::XRegFromCode(taint_code1);
   Register taint_str2 = Register::XRegFromCode(taint_code2);
+  // Taint
 
   if (instruction->IsIntConstant()
       || instruction->IsLongConstant()
@@ -1100,22 +1102,22 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
       __ Ldr(temp, StackOperandFrom(source));
       __ Str(temp, StackOperandFrom(destination));
       */
+      __ Ldr(temp, StackOperandFrom(source));
       // Taint
       Register temp1 = temps.AcquireW();
-      __ Ldp(temp, temp1, StackOperandFrom(source));
-      __ Stp(temp, temp1, StackOperandFrom(destination));
-      /*
+      // Ldp and Stp require rt and rt2 has the same type and size. temp is FPRegister and has 32 bits or 64 bits, while temp1 is Register and has 32 bits.
+      // __ Ldp(temp, temp1, StackOperandFrom(source));
+      // __ Stp(temp, temp1, StackOperandFrom(destination));
       if (source.IsStackSlot()) {
               __ Ldr(temp1.W(), MemOperand(sp, source.GetStackIndex() + 4));
-              __ Stp(temp, temp1, StackOperandFrom(destination));
-              // __ Str(temp, StackOperandFrom(destination));
-              // __ Str(temp1, MemOperand(sp, destination.GetStackIndex() + 4));
+              // __ Stp(temp, temp1, StackOperandFrom(destination));
+              __ Str(temp, StackOperandFrom(destination));
+              __ Str(temp1, MemOperand(sp, destination.GetStackIndex() + 4));
       } else if (source.IsDoubleStackSlot()) {
               __ Ldr(temp1.W(), MemOperand(sp, source.GetStackIndex() + 8));
-              // __ Str(temp, StackOperandFrom(destination));
-              // __ Str(temp1, MemOperand(sp, destination.GetStackIndex() + 8));
+              __ Str(temp, StackOperandFrom(destination));
+              __ Str(temp1, MemOperand(sp, destination.GetStackIndex() + 8));
       }
-      */
       // wrong version
       // __ Ldr(temp1, MemOperand(sp, source.GetStackIndex() + 1));
       // __ Str(temp1, MemOperand(sp, destination.GetStackIndex() + 1));
@@ -1123,6 +1125,13 @@ void CodeGeneratorARM64::MoveLocation(Location destination, Location source, Pri
     }
   }
 }
+
+#define LOAD_TAINT(reg, code, offset)  \
+MemOperand src_taint = src;  \
+src_taint.AddOffset(offset);  \
+CODE_CLEAR(reg, code)  \
+__ Ldr(temp.W(), src_taint);  \
+__ Orr(reg, reg, Operand(temp, LSL, 2 * code));
 
 void CodeGeneratorARM64::Load(Primitive::Type type,
                               CPURegister dst,
@@ -1140,45 +1149,28 @@ void CodeGeneratorARM64::Load(Primitive::Type type,
       // Ldrb calculates an address from a base register value and an offset register value, loads a byte from memory, zero-extends it, and writes it to a WRegister.
       __ Ldrb(Register(dst), src);
       // Taint
-      MemOperand src_taint = src;
-      // Boolean occupies 8 bits, that is 1 byte.
-      src_taint.AddOffset(1);
-      CODE_CLEAR(taint_str1, out_code)
-      __ Ldr(temp.W(), src_taint);
-      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+      LOAD_TAINT(taint_str1, out_code, 1)
               break;
                                   }
     case Primitive::kPrimByte: {
       // loads a byte from memory, sign-extends it to either 32 bits or 64 bits, and writes the result to a register.
       __ Ldrsb(Register(dst), src);
       // Taint
-      MemOperand src_taint = src;
-      src_taint.AddOffset(1);
-      CODE_CLEAR(taint_str1, out_code)
-      __ Ldr(temp.W(), src_taint);
-      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+      LOAD_TAINT(taint_str1, out_code, 1)
               break;
                                }
     case Primitive::kPrimShort: {
       // loads a halfword from memory, sign-extends it to 32 bits or 64 bits, and writes the result to a register.
       __ Ldrsh(Register(dst), src);
       // Taint
-      MemOperand src_taint = src;
-      src_taint.AddOffset(2);
-      CODE_CLEAR(taint_str1, out_code)
-      __ Ldr(temp.W(), src_taint);
-      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+      LOAD_TAINT(taint_str1, out_code, 2)
               break;
                                 }
     case Primitive::kPrimChar: {
       // loads a halfword from memory, zero-extends it, and writes it to a register.
       __ Ldrh(Register(dst), src);
       // Taint
-      MemOperand src_taint = src;
-      src_taint.AddOffset(2);
-      CODE_CLEAR(taint_str1, out_code)
-      __ Ldr(temp.W(), src_taint);
-      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+      LOAD_TAINT(taint_str1, out_code, 2)
               break;
                                }
     case Primitive::kPrimInt:
@@ -1248,11 +1240,7 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       __ Ldarb(Register(dst), base);
       MaybeRecordImplicitNullCheck(instruction);
       // Taint
-      MemOperand src_taint = src;
-      src_taint.AddOffset(1);
-      CODE_CLEAR(taint_str1, out_code)
-      __ Ldr(temp.W(), src_taint);
-      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+      LOAD_TAINT(taint_str1, out_code, 1)
               break;
                                   }
     case Primitive::kPrimByte: {
@@ -1261,22 +1249,14 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       // Sbfx : extracts any number of adjacent bits at any position from a register, sign-extends them to the size of the register, and writes the result to the destination register.
       __ Sbfx(Register(dst), Register(dst), 0, Primitive::ComponentSize(type) * kBitsPerByte);
       // Taint
-      MemOperand src_taint = src;
-      src_taint.AddOffset(1);
-      CODE_CLEAR(taint_str1, out_code)
-      __ Ldr(temp.W(), src_taint);
-      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+      LOAD_TAINT(taint_str1, out_code, 1)
               break;
                                }
     case Primitive::kPrimChar : {
       __ Ldarh(Register(dst), base);
       MaybeRecordImplicitNullCheck(instruction);
       // Taint
-      MemOperand src_taint = src;
-      src_taint.AddOffset(2);
-      CODE_CLEAR(taint_str1, out_code)
-      __ Ldr(temp.W(), src_taint);
-      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+      LOAD_TAINT(taint_str1, out_code, 2)
       break;
                                 }
     case Primitive::kPrimShort: {
@@ -1284,11 +1264,7 @@ void CodeGeneratorARM64::LoadAcquire(HInstruction* instruction,
       MaybeRecordImplicitNullCheck(instruction);
       __ Sbfx(Register(dst), Register(dst), 0, Primitive::ComponentSize(type) * kBitsPerByte);
       // Taint
-      MemOperand src_taint = src;
-      src_taint.AddOffset(2);
-      CODE_CLEAR(taint_str1, out_code)
-      __ Ldr(temp.W(), src_taint);
-      __ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * out_code));
+      LOAD_TAINT(taint_str1, out_code, 2)
               break;
                                 }
     case Primitive::kPrimInt:
@@ -1976,6 +1952,7 @@ void InstructionCodeGeneratorARM64::VisitArrayGet(HArrayGet* instruction) {
     Register index_reg = RegisterFrom(index, Primitive::kPrimInt);
     __ Add(temp1, obj, Operand(index_reg, LSL, Primitive::ComponentSizeShift(type)));
 
+    /*
     {
     // add this scope, so there is enough scratch register for tainted 'Load' func.
     // Taint begin
@@ -1986,6 +1963,7 @@ void InstructionCodeGeneratorARM64::VisitArrayGet(HArrayGet* instruction) {
     CLEAR_ADD(taint_str, obj.code(), temp1.code())
     // Taint end
     }
+    */
 
     // a heap reference must be 32 bit,so temp is WRegister.
     source = HeapOperand(temp1, offset);
@@ -2058,23 +2036,30 @@ void InstructionCodeGeneratorARM64::VisitArraySet(HArraySet* instruction) {
         destination = HeapOperand(obj, offset);
       } else {
         Register temp1 = temps.AcquireSameSizeAs(obj);
+        // TEST
+        // VLOG(TA64) << "VisitArraySet's temp1 register'c code is " << temp1.code() << " and the size is " << temp1.size();
         Register index_reg = InputRegisterAt(instruction, 1);
         __ Add(temp1, obj, Operand(index_reg, LSL, Primitive::ComponentSizeShift(value_type)));
         destination = HeapOperand(temp1, offset);
 
+        /*
 #ifdef TAINT_TRACKING
+        // obj[index] ← value
         {
         // add this scope, so there are enough scratch register for tainted 'Store' func
         // Taint
         UseScratchRegisterScope temps_t(masm);
         Register taint_str = Register::XRegFromCode(taint_code1);
         Register temp = temps_t.AcquireX();
+        VLOG(TA64) << "VisitArraySet's taint temp register'c code is " << temp.code();
         CLEAR_ADD(taint_str, obj.code(), temp1.code())
         // Taint
         }
 #endif
+      */
       }
 
+      // Taint: the taint propagation is completed in Store.
       codegen_->Store(value_type, value, destination);
       codegen_->MaybeRecordImplicitNullCheck(instruction);
     }
@@ -2551,6 +2536,7 @@ void InstructionCodeGeneratorARM64::VisitInstanceOf(HInstanceOf* instruction) {
   LocationSummary* locations = instruction->GetLocations();
   Register obj = InputRegisterAt(instruction, 0);;
   Register cls = InputRegisterAt(instruction, 1);;
+  // Taint NOTE: out is WRegister of XRegister
   Register out = OutputRegister(instruction);
 
   vixl::Label done;
@@ -2580,6 +2566,10 @@ void InstructionCodeGeneratorARM64::VisitInstanceOf(HInstanceOf* instruction) {
     __ Bind(slow_path->GetExitLabel());
   }
 
+  // Taint: clear the taint tag of 'out'
+  Register taint_str = Register::XRegFromCode(taint_code1);
+  TAINT_CLEAR(out, taint_str)
+  // Taint end
   __ Bind(&done);
 }
 

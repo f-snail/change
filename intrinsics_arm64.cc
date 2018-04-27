@@ -382,11 +382,30 @@ static void CreateIntToFPLocations(ArenaAllocator* arena, HInvoke* invoke) {
   locations->SetOut(Location::RequiresFpuRegister());
 }
 
+#define MOVE_TAINT(taint_str1, taint_str2, code1, code2)  \
+__ Mov(temp, 0);  \
+if ( code2 == 0 )  \
+__ Bfm(taint_str1, temp, 0, 1);  \
+else  \
+__ Bfm(taint_str1, temp, 64 - 2 * code2, 1);  \
+__ Ubfm(temp, taint_str2, code1 * 2, code1 * 2 + 1);   \
+__ Orr(taint_str1, taint_str1, Operand(temp, LSL, 2 * code2));
+
 static void MoveFPToInt(LocationSummary* locations, bool is64bit, vixl::MacroAssembler* masm) {
   Location input = locations->InAt(0);
   Location output = locations->Out();
   __ Fmov(is64bit ? XRegisterFrom(output) : WRegisterFrom(output),
           is64bit ? DRegisterFrom(input) : SRegisterFrom(input));
+  // Taint
+  Register taint_str1 = Register::XRegFromCode(taint_code1);
+  Register taint_str2 = Register::XRegFromCode(taint_code2);
+  UseScratchRegisterScope temps(masm);
+
+  Register temp = temps.AcquireX();
+  unsigned out_code = XRegisterFrom(output).code();
+  unsigned in_code = DRegisterFrom(input).code();
+  MOVE_TAINT(taint_str1, taint_str2, in_code, out_code)
+  // Taint
 }
 
 static void MoveIntToFP(LocationSummary* locations, bool is64bit, vixl::MacroAssembler* masm) {
@@ -394,6 +413,17 @@ static void MoveIntToFP(LocationSummary* locations, bool is64bit, vixl::MacroAss
   Location output = locations->Out();
   __ Fmov(is64bit ? DRegisterFrom(output) : SRegisterFrom(output),
           is64bit ? XRegisterFrom(input) : WRegisterFrom(input));
+
+  // Taint
+  Register taint_str1 = Register::XRegFromCode(taint_code1);
+  Register taint_str2 = Register::XRegFromCode(taint_code2);
+  UseScratchRegisterScope temps(masm);
+
+  Register temp = temps.AcquireX();
+  unsigned out_code = DRegisterFrom(output).code();
+  unsigned in_code = XRegisterFrom(input).code();
+  MOVE_TAINT(taint_str2, taint_str1, in_code, out_code)
+  // Taint
 }
 
 void IntrinsicLocationsBuilderARM64::VisitDoubleDoubleToRawLongBits(HInvoke* invoke) {
@@ -451,6 +481,16 @@ static void GenReverseBytes(LocationSummary* locations,
       LOG(FATAL) << "Unexpected size for reverse-bytes: " << type;
       UNREACHABLE();
   }
+  // Taint: reverseBytes that means the taint tag of 'in' moves to 'out'
+  Register taint_str = Register::XRegFromCode(taint_code1);
+  UseScratchRegisterScope temps(masm);
+
+  Register temp = temps.AcquireX();
+  unsigned in_code = XRegisterFrom(in).code();
+  unsigned out_code = XRegisterFrom(out).code();
+
+  MOVE_TAINT(taint_str, taint_str, in_code, out_code)
+  // Taint
 }
 
 void IntrinsicLocationsBuilderARM64::VisitIntegerReverseBytes(HInvoke* invoke) {
@@ -486,6 +526,17 @@ static void GenReverse(LocationSummary* locations,
   Location out = locations->Out();
 
   __ Rbit(RegisterFrom(out, type), RegisterFrom(in, type));
+
+  // Taint: Reverse bits in GPR
+  Register taint_str = Register::XRegFromCode(taint_code1);
+  UseScratchRegisterScope temps(masm);
+
+  Register temp = temps.AcquireX();
+  unsigned in_code = XRegisterFrom(in).code();
+  unsigned out_code = XRegisterFrom(out).code();
+
+  MOVE_TAINT(taint_str, taint_str, in_code, out_code)
+  // Taint
 }
 
 void IntrinsicLocationsBuilderARM64::VisitIntegerReverse(HInvoke* invoke) {
@@ -520,6 +571,16 @@ static void MathAbsFP(LocationSummary* locations, bool is64bit, vixl::MacroAssem
   FPRegister out_reg = is64bit ? DRegisterFrom(out) : SRegisterFrom(out);
 
   __ Fabs(out_reg, in_reg);
+  // Taint: Floating-point Absolute value
+  Register taint_str = Register::XRegFromCode(taint_code2);
+  UseScratchRegisterScope temps(masm);
+
+  Register temp = temps.AcquireX();
+  unsigned in_code = DRegisterFrom(in).code();
+  unsigned out_code = DRegisterFrom(out).code();
+
+  MOVE_TAINT(taint_str, taint_str, in_code, out_code)
+  // Taint
 }
 
 void IntrinsicLocationsBuilderARM64::VisitMathAbsDouble(HInvoke* invoke) {
@@ -557,6 +618,17 @@ static void GenAbsInteger(LocationSummary* locations,
 
   __ Cmp(in_reg, Operand(0));
   __ Cneg(out_reg, in_reg, lt);
+
+  // Taint
+  Register taint_str = Register::XRegFromCode(taint_code1);
+  UseScratchRegisterScope temps(masm);
+
+  Register temp = temps.AcquireX();
+  unsigned in_code = in_reg.code();
+  unsigned out_code = out_reg.code();
+
+  MOVE_TAINT(taint_str, taint_str, in_code, out_code)
+  // Taint
 }
 
 void IntrinsicLocationsBuilderARM64::VisitMathAbsInt(HInvoke* invoke) {
@@ -757,6 +829,17 @@ static void GenMathRound(LocationSummary* locations,
   }
   __ Fadd(temp1_reg, in_reg, temp1_reg);
   __ Fcvtms(out_reg, temp1_reg);
+
+  // Taint: Floating-point Convert to Signed integer
+  Register taint_str1 = Register::XRegFromCode(taint_code1);
+  Register taint_str2 = Register::XRegFromCode(taint_code2);
+
+  Register temp = temps.AcquireX();
+  unsigned in_code = in_reg.code();
+  unsigned out_code = out_reg.code();
+
+  MOVE_TAINT(taint_str1, taint_str2, in_code, out_code)
+  // Taint
 }
 
 void IntrinsicLocationsBuilderARM64::VisitMathRoundDouble(HInvoke* invoke) {
@@ -783,6 +866,8 @@ void IntrinsicCodeGeneratorARM64::VisitMemoryPeekByte(HInvoke* invoke) {
   vixl::MacroAssembler* masm = GetVIXLAssembler();
   __ Ldrsb(WRegisterFrom(invoke->GetLocations()->Out()),
           AbsoluteHeapOperandFrom(invoke->GetLocations()->InAt(0), 0));
+  // TEST
+  VLOG(TA64) << "The intrinsics completaion of PeekByte() in Memory.java";
 }
 
 void IntrinsicLocationsBuilderARM64::VisitMemoryPeekIntNative(HInvoke* invoke) {

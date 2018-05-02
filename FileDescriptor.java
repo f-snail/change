@@ -117,4 +117,27 @@ public final class FileDescriptor {
     @Override public String toString() {
         return "FileDescriptor[" + descriptor + "]";
     }
+
+// Taint begin
+    /**
+     * hack for printing out IP address
+     * @hide
+     */
+    public boolean hasName = false;
+
+    /**
+     * hack for printing out IP address
+     * @hide
+     */
+     public String name = null;
+
+     /**
+      * hack for setting file taint
+      * @hide
+      */
+     public int getDescriptor()
+     {
+             return descriptor;
+     }
+// Taint end
 }

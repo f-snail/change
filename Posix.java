@@ -41,9 +41,6 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.NioUtils;
 
-//Taint begin
-import java.lang.Taint;
-//Taint end
 public final class Posix implements Os {
     Posix() { }
 
@@ -216,29 +213,9 @@ public final class Posix implements Os {
     public int sendto(FileDescriptor fd, byte[] bytes, int byteOffset, int byteCount, int flags, SocketAddress address) throws ErrnoException, SocketException {
         return sendtoBytes(fd, bytes, byteOffset, byteCount, flags, address);
     }
-
-	//Taint begin
-    //private native int sendtoBytes(FileDescriptor fd, Object buffer, int byteOffset, int byteCount, int flags, InetAddress inetAddress, int port) throws ErrnoException, SocketException;
-	private native int sendtoBytesImpl(FileDescriptor fd, Object buffer, int byteOffset, int byteCount, int flags, InetAddress inetAddress, int port) throws ErrnoException, SocketException;
-	private int sendtoBytes(FileDescriptor fd, Object buffer, int byteOffset, int byteCount, int flags, InetAddress inetAddress, int port) throws ErrnoException, SocketException {
-		if (buffer instanceof byte[]) {
-			int tag = Taint.getTaint((byte[]) buffer);//the parameter of getTaint is ByteArray.
-			if (tag != Taint.TAINT_CLEAR) {
-				String dstr = new String((byte[]) buffer, byteOffset, ((byteCount > Taint.dataBytesToLog) ? Taint.dataBytesToLog : byteCount));
-				// replace non-printable characters 
-				dstr = dstr.replaceAll("\\p{C}", ".");
-				String addr = (fd.hasName) ? fd.name : "unknown";
-				String tstr = "0x" + Integer.toHexString(tag);
-				Taint.log("libcore.os.send("+addr+") received data with taint level " + tstr + " data=["+dstr+"] ");
-			}
-		}
-		return sendtoBytesImpl(fd, buffer, byteOffset, byteCount, flags, inetAddress, port);
-	}
-	//Taint end
-	
+    private native int sendtoBytes(FileDescriptor fd, Object buffer, int byteOffset, int byteCount, int flags, InetAddress inetAddress, int port) throws ErrnoException, SocketException;
     private native int sendtoBytes(FileDescriptor fd, Object buffer, int byteOffset, int byteCount, int flags, SocketAddress address) throws ErrnoException, SocketException;
-    
-	public native void setegid(int egid) throws ErrnoException;
+    public native void setegid(int egid) throws ErrnoException;
     public native void setenv(String name, String value, boolean overwrite) throws ErrnoException;
     public native void seteuid(int euid) throws ErrnoException;
     public native void setgid(int gid) throws ErrnoException;

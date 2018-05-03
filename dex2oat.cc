@@ -235,11 +235,14 @@ NO_RETURN static void Usage(const char* fmt, ...) {
   UsageError("  --compiler-backend=(Quick|Optimizing): select compiler backend");
   UsageError("      set.");
   UsageError("      Example: --compiler-backend=Optimizing");
-  if (kUseOptimizingCompiler) {
+  // Taint begin
+  /*if (kUseOptimizingCompiler) {
     UsageError("      Default: Optimizing");
   } else {
     UsageError("      Default: Quick");
   }
+  */
+  // Taint end
   UsageError("");
   UsageError("  --compiler-filter="
                 "(verify-none"
@@ -699,8 +702,8 @@ class Dex2Oat FINAL {
         StringPiece backend_str = option.substr(strlen("--compiler-backend=")).data();
         if (backend_str == "Quick") {
                 /*Taint begin*/
-          // compiler_kind_ = Compiler::kQuick;
-          compiler_kind_ = Compiler::kOptimizing;
+          compiler_kind_ = Compiler::kQuick;
+          // compiler_kind_ = Compiler::kOptimizing;
           /*Taint end*/
         } else if (backend_str == "Optimizing") {
           compiler_kind_ = Compiler::kOptimizing;
@@ -854,7 +857,9 @@ class Dex2Oat FINAL {
     }
 
     image_ = (!image_filename_.empty());
-    if (!requested_specific_compiler && !kUseOptimizingCompiler) {
+    // Taint begin
+    if (!requested_specific_compiler/* && !kUseOptimizingCompiler*/) {
+            // Taint end
       // If no specific compiler is requested, the current behavior is
       // to compile the boot image with Quick, and the rest with Optimizing.
       // Taint begin

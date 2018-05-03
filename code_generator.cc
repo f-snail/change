@@ -941,7 +941,9 @@ void SlowPathCode::SaveLiveRegisters(CodeGenerator* codegen, LocationSummary* lo
         if (locations->RegisterContainsObject(i)) {
           locations->SetStackBit(stack_offset / kVRegSize);
         }
-        DCHECK_LT(stack_offset, codegen->GetFrameSize() - codegen->FrameEntrySpillSize());
+        // Taint: compile error
+        // DCHECK_LT(stack_offset, codegen->GetFrameSize() - codegen->FrameEntrySpillSize());
+        DCHECK_LE(stack_offset, codegen->GetFrameSize() - codegen->FrameEntrySpillSize());
         DCHECK_LT(i, kMaximumNumberOfExpectedRegisters);
         saved_core_stack_offsets_[i] = stack_offset;
         // Taint begin
@@ -973,7 +975,9 @@ void SlowPathCode::RestoreLiveRegisters(CodeGenerator* codegen, LocationSummary*
     // if (!codegen->IsCoreCalleeSaveRegister(i)) {
     if (!codegen->IsCoreCalleeSaveRegister(i) && i != 22 && i != 23) {
       if (register_set->ContainsCoreRegister(i)) {
-        DCHECK_LT(stack_offset, codegen->GetFrameSize() - codegen->FrameEntrySpillSize());
+        // Taint: compile error
+        // DCHECK_LT(stack_offset, codegen->GetFrameSize() - codegen->FrameEntrySpillSize());
+        DCHECK_LE(stack_offset, codegen->GetFrameSize() - codegen->FrameEntrySpillSize());
         // Taint begin
         // get the taint from stack into taint_str.
         stack_offset += codegen->RestoreCoreRegister(stack_offset, i);

@@ -24,11 +24,14 @@ public final class Taint{
         public static final int TAINT_LV2        =0x00000002;
         public static final int TAINT_LV3        =0x00000003;
 
+        // how many bytes of tainted network output data to print to log?
+        public static final int dataBytesToLog = 100;
+
         /**
-		 * update/get the target "Int" data's taint tag
-          returns nothing
-		  the implementation is in optimizing compiler's intrinsic functions. 
-		  */
+         * update/get the target "Int" data's taint tag
+         * returns nothing
+	 * the implementation is in optimizing compiler's intrinsic functions
+         */
         public static native void addTaint(int val,int tag);
         public static native int getTaint(int val);
         public static native void addTaint(short val, int tag);
@@ -52,4 +55,7 @@ public final class Taint{
         public static native int getTaint(boolean[] val);
         public static native long[] addTaint(long[] val, int tag);
         public static native int getTaint(long[] val);
+
+        // not be able to use android.util.Slog,compile error
+        public static native void log(String msg);                
 }

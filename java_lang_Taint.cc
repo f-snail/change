@@ -25,13 +25,16 @@
 /*
  * public static void log(String msg)
  */
-static void Taint_log(JNIEnv* env, jobject java_this, jobject java_string_msg){
+static void Taint_log(JNIEnv* env, jobject java_this, jobject java_string_msg) {
         ScopedFastNativeObjectAccess soa(env);
-        if (UNLIKELY(java_rhs == nullptr)) {
-                ThrowNullPointerException("rhs == null");
+        if (UNLIKELY(java_string_msg == nullptr)) {
+                ThrowNullPointerException("msg == null");
+                return;
         }
 
-        mirror::String* msg = soa.Decode<mirror::String*>(java_string_msg);       
+        const char* msg = env->GetStringUTFChars(java_string_msg, nullptr);
+        LOG(INFO) << "TaintLog: " << msg;
+        env->ReleaseStringUTFChars(java_string_msg, msg);
 }
 
 static JNINativeMethod gMethods[] = {

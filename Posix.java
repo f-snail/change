@@ -41,6 +41,10 @@ import java.net.SocketException;
 import java.nio.ByteBuffer;
 import java.nio.NioUtils;
 
+// Taint begin
+import java.lang.Taint;
+// Taint end
+
 public final class Posix implements Os {
     Posix() { }
 
@@ -52,7 +56,19 @@ public final class Posix implements Os {
     public native void chmod(String path, int mode) throws ErrnoException;
     public native void chown(String path, int uid, int gid) throws ErrnoException;
     public native void close(FileDescriptor fd) throws ErrnoException;
-    public native void connect(FileDescriptor fd, InetAddress address, int port) throws ErrnoException, SocketException;
+    // Taint begin
+    // public native void connect(FileDescriptor fd, InetAddress address, int port) throws ErrnoException, SocketException;
+    public native void connectImpl(FileDescriptor fd, InetAddress address, int port) throws ErrnoException, SocketException;
+    public void connect(FileDescriptor fd, InetAddress address, int port) throws ErrnoException, SocketException
+    {
+            String addr = address.getHostAddress();
+            if (addr != null) {
+                    fd.hasName = true;
+                    fd.name = addr;
+            }
+            connectImpl(fd, address, port);
+    }
+    // Taint end
     public native void connect(FileDescriptor fd, SocketAddress address) throws ErrnoException, SocketException;
     public native FileDescriptor dup(FileDescriptor oldFd) throws ErrnoException;
     public native FileDescriptor dup2(FileDescriptor oldFd, int newFd) throws ErrnoException;
@@ -132,12 +148,36 @@ public final class Posix implements Os {
         // This indirection isn't strictly necessary, but ensures that our public interface is type safe.
         return preadBytes(fd, bytes, byteOffset, byteCount, offset);
     }
+    // Taint begin
     private native int preadBytes(FileDescriptor fd, Object buffer, int bufferOffset, int byteCount, long offset) throws ErrnoException, InterruptedIOException;
+    /*
+       private native int preadBytesImpl(FileDescriptor fd, Object buffer, int bufferOffset, int byteCount, long offset) throws ErrnoException, InterruptedIOException;
+    private int preadBytes(FileDescriptor fd, Object buffer, int bufferOffset, int byteCount, long offset) throws ErrnoException, InterruptedIOException{
+            if (buffer == null) {
+                    throw new NullPointerException();
+            }
+            int bytesRead = preadBytesImpl(fd, buffer, bufferOffset, byteCount, offset);
+            int fdInt = fd.getDescriptor();
+            int tag = Taint.getTaintFile(fdInt);
+            if (tag != Taint.TAINT_CLEAR) {
+                    String dstr = new String((byte[])buffer, bufferOffset, ((byteCount > Taint.dataBytesToLog) ? Taint.dataBytesToLog : byteCount));
+                    // replace non-printable characters
+                    dstr = dstr.replaceAll("\\p{C}", ".");
+                    String tstr = "0x" + Integer.toHexString(tag);
+                    // TODO
+                    // Taint.log("libcore.os.read(" + fdInt + ") reading with tag " + tstr + " data[" + dstr + "]");
+                    Taint.addTaint((byte[])buffer, tag);
+            }
+            return bytesRead;
+    }
+    */
+    // Taint end
     public int pwrite(FileDescriptor fd, ByteBuffer buffer, long offset) throws ErrnoException, InterruptedIOException {
         final int bytesWritten;
         final int position = buffer.position();
 
         if (buffer.isDirect()) {
+            // Taint: about File taint propagation TODO
             bytesWritten = pwriteBytes(fd, buffer, position, buffer.remaining(), offset);
         } else {
             bytesWritten = pwriteBytes(fd, NioUtils.unsafeArray(buffer), NioUtils.unsafeArrayOffset(buffer) + position, buffer.remaining(), offset);

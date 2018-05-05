@@ -25,9 +25,9 @@ import java.nio.channels.FileChannel.MapMode;
 import libcore.io.Libcore;
 import libcore.io.Memory;
 
-//Taint begin
+// Taint begin
 import java.lang.Taint;
-//Taine end
+// Taint end
 
 import static android.system.OsConstants.MAP_PRIVATE;
 import static android.system.OsConstants.MAP_SHARED;
@@ -84,6 +84,13 @@ class MemoryBlock {
             array = null;
             super.free();
         }
+
+        // Taint begin
+        @Override public void addTaint(int newTaint) {
+                super.addTaint(newTaint);
+                Taint.addTaint(array, newTaint);
+        }
+        // Taint end    
     }
 
     /**
@@ -100,12 +107,14 @@ class MemoryBlock {
     protected final long size;
     private boolean accessible;
     private boolean freed;
+    // Taint begin
+    protected int taint;
+    public void addTaint(int newTaint) {
+            taint = newTaint;  // just change to the new taint.
+    }
+    // Taint end
 
-	//Taint begin
-	protected int taint;
-	//Taint end
-    
-	public static MemoryBlock mmap(FileDescriptor fd, long offset, long size, MapMode mapMode) throws IOException {
+    public static MemoryBlock mmap(FileDescriptor fd, long offset, long size, MapMode mapMode) throws IOException {
         if (size == 0) {
             // You can't mmap(2) a zero-length region, but Java allows it.
             return new MemoryBlock(0, 0);
@@ -150,9 +159,9 @@ class MemoryBlock {
         this.size = size;
         accessible = true;
         freed = false;
-//Taint begin
-		this.taint = Taint.TAINT_CLEAR;
-//Taint end
+        // Taint begin
+        this.taint = Taint.TAINT_CLEAR;
+        // Taint end
     }
 
     // Used to support array/arrayOffset/hasArray for direct buffers.
@@ -178,159 +187,157 @@ class MemoryBlock {
     }
 
     public final void pokeByte(int offset, byte value) {
-		//Taint begin
-        taint = Taint.getTaint(value);
-		//Taint end
-		Memory.pokeByte(address + offset, value);
+         // Taint begin
+         addTaint(Taint.getTaint(value));
+         // Taint end
+         Memory.pokeByte(address + offset, value);
     }
 
     public final void pokeByteArray(int offset, byte[] src, int srcOffset, int byteCount) {
-        //Taint begin
-		taint = Taint.getTaint(src);
-		//Taint end
-		Memory.pokeByteArray(address + offset, src, srcOffset, byteCount);
+        // Taint begin
+        addTaint(Taint.getTaint(src));
+        // Taint end
+        Memory.pokeByteArray(address + offset, src, srcOffset, byteCount);
     }
 
     public final void pokeCharArray(int offset, char[] src, int srcOffset, int charCount, boolean swap) {
-        //Taint begin
-		taint = Taint.getTaint(src);
-		//Taint end
-		Memory.pokeCharArray(address + offset, src, srcOffset, charCount, swap);
+        // Taint begin
+        addTaint(Taint.getTaint(src));
+        // Taint end
+        Memory.pokeCharArray(address + offset, src, srcOffset, charCount, swap);
     }
 
     public final void pokeDoubleArray(int offset, double[] src, int srcOffset, int doubleCount, boolean swap) {
-        //Taint begin
-		taint = Taint.getTaint(src); 
-		//Taint end
-		Memory.pokeDoubleArray(address + offset, src, srcOffset, doubleCount, swap);
+        // Taint:TODO
+        Memory.pokeDoubleArray(address + offset, src, srcOffset, doubleCount, swap);
     }
 
     public final void pokeFloatArray(int offset, float[] src, int srcOffset, int floatCount, boolean swap) {
-        //Taint begin TODO
-		//taint = Taint.getTaint(src); 
-		//Taint end
-		Memory.pokeFloatArray(address + offset, src, srcOffset, floatCount, swap);
+        // Taint:TODO
+        Memory.pokeFloatArray(address + offset, src, srcOffset, floatCount, swap);
     }
 
     public final void pokeIntArray(int offset, int[] src, int srcOffset, int intCount, boolean swap) {
-        //Taint begin
-		taint = Taint.getTaint(src);
-		//Taint end
-		Memory.pokeIntArray(address + offset, src, srcOffset, intCount, swap);
+        // Taint begin
+        addTaint(Taint.getTaint(src));
+        // Taint end
+        Memory.pokeIntArray(address + offset, src, srcOffset, intCount, swap);
     }
 
     public final void pokeLongArray(int offset, long[] src, int srcOffset, int longCount, boolean swap) {
-        //Taint begin 
-		taint = Taint.getTaint(src);
-		//Taint end
-		Memory.pokeLongArray(address + offset, src, srcOffset, longCount, swap);
+        // Taint begin
+        addTaint(Taint.getTaint(src));
+        // Taint end
+        Memory.pokeLongArray(address + offset, src, srcOffset, longCount, swap);
     }
 
     public final void pokeShortArray(int offset, short[] src, int srcOffset, int shortCount, boolean swap) {
-        //Taint begin
-		taint = Taint.getTaint(src);
-		//Taint end
-		Memory.pokeShortArray(address + offset, src, srcOffset, shortCount, swap);
+        // Taint begin
+        addTaint(Taint.getTaint(src));
+        // Taint end
+        Memory.pokeShortArray(address + offset, src, srcOffset, shortCount, swap);
     }
 
     public final byte peekByte(int offset) {
-		//Taint begin
+        // Taint begin
+        // return Memory.peekByte(address + offset);
         byte val = Memory.peekByte(address + offset);
-		Taint.addTaint(val,taint);
-		return val;
-		//Taint end
-		//return Memory.peekByte(address + offset);
+        Taint.addTaint(val, taint);
+        return val;
+        // Taint end
     }
 
     public final void peekByteArray(int offset, byte[] dst, int dstOffset, int byteCount) {
-		Memory.peekByteArray(address + offset, dst, dstOffset, byteCount);
-		//Taint begin
-		Taint.addTaint(dst,taint);
-		//Taint end
+        Memory.peekByteArray(address + offset, dst, dstOffset, byteCount);
+        // Taint begin
+        Taint.addTaint(dst, taint);
+        // Taint end
     }
 
     public final void peekCharArray(int offset, char[] dst, int dstOffset, int charCount, boolean swap) {
         Memory.peekCharArray(address + offset, dst, dstOffset, charCount, swap);
-		//Taint begin
-		Taint.addTaint(dst,taint);
-		//Taint end
-	}
+        // Taint begin
+        Taint.addTaint(dst, taint);
+        // Taint end
+    }
 
     public final void peekDoubleArray(int offset, double[] dst, int dstOffset, int doubleCount, boolean swap) {
         Memory.peekDoubleArray(address + offset, dst, dstOffset, doubleCount, swap);
+        // Taint: TODO
     }
 
     public final void peekFloatArray(int offset, float[] dst, int dstOffset, int floatCount, boolean swap) {
         Memory.peekFloatArray(address + offset, dst, dstOffset, floatCount, swap);
+        // Taint: TODO
     }
 
     public final void peekIntArray(int offset, int[] dst, int dstOffset, int intCount, boolean swap) {
         Memory.peekIntArray(address + offset, dst, dstOffset, intCount, swap);
-		//Taint begin
-		Taint.addTaint(dst,taint);
-		//Taint end
-	}
+        // Taint begin
+        Taint.addTaint(dst, taint);
+        // Taint end
+    }
 
     public final void peekLongArray(int offset, long[] dst, int dstOffset, int longCount, boolean swap) {
         Memory.peekLongArray(address + offset, dst, dstOffset, longCount, swap);
-		//Taint begin
-		Taint.addTaint(dst,taint);
-		//Taint end
-	}
+        // Taint begin
+        Taint.addTaint(dst, taint);
+        // Taint end
+    }
 
     public final void peekShortArray(int offset, short[] dst, int dstOffset, int shortCount, boolean swap) {
         Memory.peekShortArray(address + offset, dst, dstOffset, shortCount, swap);
-		//Taint begin
-		Taint.addTaint(dst,taint);
-		//Taint end
-	}
+        // Taint begin
+        Taint.addTaint(dst, taint);
+        // Taint end
+    }
 
     public final void pokeShort(int offset, short value, ByteOrder order) {
-		//Taint begin
-		taint = Taint.getTaint(value);
-		//Taint end
+        // Taint begin
+        addTaint(Taint.getTaint(value));
+        // Taint end
         Memory.pokeShort(address + offset, value, order.needsSwap);
-	}
+    }
 
     public final short peekShort(int offset, ByteOrder order) {
-		//Taint begin
-		short val = Memory.peekShort(address + offset, order.needsSwap);
-		Taint.addTaint(val);
-		return val;
-		//Taint end
-        //return Memory.peekShort(address + offset, order.needsSwap);
+        // Taint begin
+        // return Memory.peekShort(address + offset, order.needsSwap);
+        short val = Memory.peekShort(address + offset, order.needsSwap);
+        Taint.addTaint(val, taint);
+        return val;
+        // Taint end
     }
 
     public final void pokeInt(int offset, int value, ByteOrder order) {
-		//Taint begin
-		taint = Taint.getTaint(value);
-		//Taint end
+        // Taint begin
+        addTaint(Taint.getTaint(value));
+        // Taint end
         Memory.pokeInt(address + offset, value, order.needsSwap);
     }
 
     public final int peekInt(int offset, ByteOrder order) {
-        //Taint begin
-		int val = Memory.peekInt(address + offset, order.needsSwap);
-		Taint.addTaint(val);
-		return val;
-		//Taint end
-		//return Memory.peekInt(address + offset, order.needsSwap);
+        // Taint begin
+        // return Memory.peekInt(address + offset, order.needsSwap);
+        int val = Memory.peekInt(address + offset, order.needsSwap);
+        Taint.addTaint(val, taint);
+        return val;
+        // Taint end
     }
 
     public final void pokeLong(int offset, long value, ByteOrder order) {
-		//Taint begin
-		taint = Taint.getTaint(value);
-		//Taint end
+        // Taint begin
+        addTaint(Taint.getTaint(value));
+        // Taint end
         Memory.pokeLong(address + offset, value, order.needsSwap);
     }
 
     public final long peekLong(int offset, ByteOrder order) {
-        //Taint begin
-		long val = Memory.peekLong(address + offset, order.needsSwap);
-		Taint.addTaint(val);
-		return val;
-		//Taint end
-		//return Memory.peekLong(address + offset, order.needsSwap);
+        // Taint begin
+        // return Memory.peekLong(address + offset, order.needsSwap);
+        long val = Memory.peekLong(address + offset, order.needsSwap);
+        Taint.addTaint(val, taint);
+        return val;
+        // Taint end
     }
 
     public final long toLong() {
@@ -344,10 +351,10 @@ class MemoryBlock {
     public final long getSize() {
         return size;
     }
-	
-	//Taint begin
-	public int getTaint() {
-		return taint;
-	}
-	//Taint end
+
+    // Taint begin
+    public int getTaint() {
+            return taint;
+    }
+    // Taint end
 }

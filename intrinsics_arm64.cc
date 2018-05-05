@@ -159,6 +159,18 @@ static void AddTaintLoc(ArenaAllocator* arena, HInvoke* invoke) {
         locations->SetInAt(1, Location::RequiresRegister());
 }
 
+// the general used AddTaint_LocationBuilder_fp format
+static void AddTaintLoc_FP(ArenaAllocator* arena, HInvoke* invoke) {
+        LocationSummary* locations = new (arena) LocationSummary(invoke,
+                                                 LocationSummary::kCall,
+                                                 kIntrinsified);
+        locations->SetInAt(0, Location::RequiresFpuRegister());
+        locations->SetInAt(1, Location::RequiresRegister());
+}
+
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintFloat(HInvoke* invoke) { AddTaintLoc_FP(arena_, invoke); }
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintDouble(HInvoke* invoke) { AddTaintLoc_FP(arena_, invoke); }
+
 // the general used AddTaint_CodeGenerator function
 static void AddTaintToTarget(LocationSummary* locations, bool isFloat, vixl::MacroAssembler* masm) {
     Location input0 = locations->InAt(0);
@@ -167,19 +179,17 @@ static void AddTaintToTarget(LocationSummary* locations, bool isFloat, vixl::Mac
     unsigned in_code = input0.reg();
     Register t_input = XRegisterFrom(input1);  // the register that contains taint.
     DCHECK(in_code != 63 && t_input.code() != 63);
+    Register taint_str;
 
-    Register taint_str1 = Register::XRegFromCode(taint_code1);
-    Register taint_str2 = Register::XRegFromCode(taint_code2);
+    if (isFloat)
+            taint_str = Register::XRegFromCode(taint_code1);
+    else
+            taint_str = Register::XRegFromCode(taint_code2);
 
     unsigned immr_bfm = 64 - 2 * in_code;
     unsigned imms_bfm = 1;
-    if (isFloat) {
-            __ Bfm(taint_str2, xzr, immr_bfm, imms_bfm);
-            __ Orr(taint_str2, taint_str2, Operand(t_input, LSL, 2 * in_code));
-    } else {
-            __ Bfm(taint_str1, xzr, immr_bfm, imms_bfm);
-            __ Orr(taint_str1, taint_str1, Operand(t_input, LSL, 2 * in_code));
-    }
+    __ Bfm(taint_str, xzr, immr_bfm, imms_bfm);
+    __ Orr(taint_str, taint_str, Operand(t_input, LSL, 2 * in_code));
 }
 
 // the general VisitAddTaint format
@@ -190,6 +200,16 @@ void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintInt(HInvoke* invoke) {
         AddTaintToTarget(locations, false, masm);
 }
 
+// the general VisitAddTaint fp format
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintFloat(HInvoke* invoke) {
+        vixl::MacroAssembler* masm = GetVIXLAssembler();
+        LocationSummary* locations = invoke->GetLocations();
+
+        AddTaintToTarget(locations, true, masm);
+}
+
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintDouble(HInvoke* invoke) { VisitTaintAddTaintFloat(invoke); }
+
 // the general used GetTaint_LocationBuilder format
 static void GetTaintLoc(ArenaAllocator* arena, HInvoke* invoke) {
         LocationSummary* locations = new (arena) LocationSummary(invoke,
@@ -199,6 +219,18 @@ static void GetTaintLoc(ArenaAllocator* arena, HInvoke* invoke) {
         locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
 }
 
+// the general used GetTaint_LocationBuilder_FP format
+static void GetTaintLoc_FP(ArenaAllocator* arena, HInvoke* invoke) {
+        LocationSummary* locations = new (arena) LocationSummary(invoke,
+                                                 LocationSummary::kCall,
+                                                 kIntrinsified);
+        locations->SetInAt(0, Location::RequiresFpuRegister());
+        locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
+}
+
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintFloat(HInvoke* invoke) { GetTaintLoc_FP(arena_, invoke); }
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintDouble(HInvoke* invoke) { GetTaintLoc_FP(arena_, invoke); }
+
 // the general used GetTaint_CodeGenerator function
 static void GetTaintFromTarget(LocationSummary* locations, bool isFloat, vixl::MacroAssembler* masm) {
         Location input = locations->InAt(0);
@@ -207,17 +239,16 @@ static void GetTaintFromTarget(LocationSummary* locations, bool isFloat, vixl::M
         unsigned in_code = input.reg();  // the number of register that contains the value that we need to find whether it has taint.
         Register t_out = XRegisterFrom(output);  // the register that contains the returned taint level
         DCHECK(in_code != 63 && t_out.code() != 63);
+        Register taint_str;
 
-        Register taint_str1 = Register::XRegFromCode(taint_code1);
-        Register taint_str2 = Register::XRegFromCode(taint_code2);
+        if (isFloat)
+                taint_str = Register::XRegFromCode(taint_code2);
+        else
+                taint_str = Register::XRegFromCode(taint_code1);
 
         unsigned lsb = 2 * in_code;  // the least significant bit,0-63
         unsigned width = 2;  // the width of the extracted bit field
-        if (isFloat) {
-                __ Ubfx(t_out, taint_str2, lsb, width);
-        } else {
-                __ Ubfx(t_out, taint_str1, lsb, width);
-        }
+        __ Ubfx(t_out, taint_str, lsb, width);
 }
 
 // the general VisitGetTaint format
@@ -227,6 +258,16 @@ void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintInt(HInvoke* invoke) {
 
         GetTaintFromTarget(locations, false, masm);
 }
+
+// the general VisitGetTaint fp format
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintFloat(HInvoke* invoke) {
+        vixl::MacroAssembler* masm = GetVIXLAssembler();
+        LocationSummary* locations = invoke->GetLocations();
+
+        GetTaintFromTarget(locations, true, masm);
+}
+
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintDouble(HInvoke* invoke) { VisitTaintGetTaintFloat(invoke); }
 
 void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintInt(HInvoke* invoke) { AddTaintLoc(arena_, invoke); }
 void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintInt(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
@@ -265,39 +306,6 @@ void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintVoid(HInvoke* invoke) {
         Register taint_str1 = Register::XRegFromCode(taint_code1);
         __ Mov(t_out, taint_str1);
 }
-/*
-void IntrinsicLocationsBuilderARM64::VisitGetTaintVoidI(HInvoke* invoke){
-	    LocationSummary* locations = new (arena_) LocationSummary(invoke,
-															      LocationSummary::kCall,
-																  kIntrinsified);
-		locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
-}
-void IntrinsicLocationsBuilderARM64::VisitGetTaintVoidF(HInvoke* invoke){
-	LocationSummary* locations = new (arena_) LocationSummary(invoke,
-															  LocationSummary::kCall,
-															  kIntrinsified);
-	locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
-}
-/output all GPR taint
-void IntrinsicCodeGeneratorARM64::VisitGetTaintVoidI(HInvoke* invoke){
-	LocationSummary* locations = invoke->GetLocations();
-	vixl::MacroAssembler* masm = GetVIXLAssembler();
-
-	Register t_out = XRegisterFrom(locations->out());
-	Register taint_str1 = Register::XRegisterFromCode(taint_code1);
-	__ Mov(t_out, taint_str1);
-}
-/output all float register taint
-void IntrinsicCodeGeneratorARM64::VisitGetTaintVoidF(HInvoke* invoke){
-	LocationSummary* locations = invoke->GetLocations();
-	vixl::MacroAssembler* masm = GetVIXLAssembler();
-
-	Register t_out = XRegisterFrom(locations->out());
-	Register taint_str2 = Register::XRegisterFromCode(taint_code2);
-	__ Mov(t_out, taint_str2);
-}
-*/
-
 
 /*Array type*/
 void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintIntArray(HInvoke* invoke) {
@@ -309,47 +317,65 @@ void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintIntArray(HInvoke* invoke)
         locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
 }
 
-void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintIntArray(HInvoke* invoke) { VisitTaintGetTaintInt(invoke); }
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintIntArray(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
 
-void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintIntArray(HInvoke* invoke) {
-        vixl::MacroAssembler* masm = GetVIXLAssembler();
-        LocationSummary* locations = invoke->GetLocations();
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintFloatArray(HInvoke* invoke) {
+        LocationSummary* locations = new (arena_) LocationSummary(invoke,
+                                                  LocationSummary::kCall,
+                                                  kIntrinsified);
+        locations->SetInAt(0, Location::RequiresFpuRegister());
+        locations->SetInAt(1, Location::RequiresRegister());
+        locations->SetOut(Location::RequiresFpuRegister(), Location::kNoOutputOverlap);
+}
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintFloatArray(HInvoke* invoke) { GetTaintLoc_FP(arena_, invoke); }
+void IntrinsicLocationsBuilderARM64::VisitTaintAddTaintDoubleArray(HInvoke* invoke) { VisitTaintAddTaintFloatArray(invoke); }
+void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintDoubleArray(HInvoke* invoke) { GetTaintLoc_FP(arena_, invoke); }
 
+static void AddTaintToTarget_Array(LocationSummary* locations, bool isFloat, vixl::MacroAssembler* masm) {
         Location input1 = locations->InAt(1);
         Location output = locations->Out();
 
         unsigned out_code = output.reg();
         Register t_input = XRegisterFrom(input1);  // the register that contains taint.
-        DCHECK(out_code != 63 && t_input.code() != 63);
+        Register taint_str;
+        if (isFloat)
+                taint_str = Register::XRegFromCode(taint_code2);
+        else
+                taint_str = Register::XRegFromCode(taint_code1);
 
-        Register taint_str = Register::XRegFromCode(taint_code1);
-
-        unsigned immr_bfm = 64 - 2 * out_code;
-        unsigned imms_bfm = 1;
-        __ Bfm(taint_str, xzr, immr_bfm, imms_bfm);
+        UseScratchRegisterScope temps(masm);
+        Register temp = temps.AcquireX();
+        __ Mov(temp, 0);
+        if (out_code == 0)
+                __ Bfm(taint_str, temp, 0, 1);
+        else
+                __ Bfm(taint_str, temp, 64 - 2 * out_code, 1);
         __ Orr(taint_str, taint_str, Operand(t_input, LSL, 2 * out_code));
 
         // move the value in parameter 0 to the returned register
-        __ Mov(XRegisterFrom(locations->Out()), XRegisterFrom(locations->InAt(0)));
+        __ Mov(DRegisterFrom(locations->Out()), DRegisterFrom(locations->InAt(0)));
 }
 
-void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintIntArray(HInvoke* invoke) { VisitTaintGetTaintInt(invoke); }
 
-/**
-void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintIntArray(HInvoke* invoke) {
-        LocationSummary* locations = new (arena_) LocationSummary(invoke,
-                                                  LocationSummary::kCall,
-                                                  kIntrinsified);
-        locations->SetInAt(0, Location::RequiresRegister());
-        locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
-}
-// TODO
-void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintIntArray(HInvoke* invoke) {
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintIntArray(HInvoke* invoke) {
         vixl::MacroAssembler* masm = GetVIXLAssembler();
         LocationSummary* locations = invoke->GetLocations();
-        GetTaintFromTarget(locations, false, masm);
+
+        AddTaintToTarget_Array(locations, false, masm);
 }
-*/
+
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintFloatArray(HInvoke* invoke) {
+        vixl::MacroAssembler* masm = GetVIXLAssembler();
+        LocationSummary* locations = invoke->GetLocations();
+
+        AddTaintToTarget_Array(locations, true, masm);
+}
+
+void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintDoubleArray(HInvoke* invoke) { VisitTaintAddTaintFloatArray(invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintFloatArray(HInvoke* invoke) { VisitTaintGetTaintFloat(invoke); }
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintDoubleArray(HInvoke* invoke) { VisitTaintGetTaintFloat(invoke); }
+
+void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintIntArray(HInvoke* invoke) { VisitTaintGetTaintInt(invoke); }
 
 #define VISIT_TAINT_INTRINSIC(type, visit_add_taint, visit_get_taint)  \
         void IntrinsicLocationsBuilderARM64::VisitTaintAddTaint ## type(HInvoke* invoke) {visit_add_taint(invoke);}  \

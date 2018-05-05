@@ -40,6 +40,10 @@ public final class Taint{
         public static native int getTaint(boolean val);       
         public static native void addTaint(byte val, int tag);
         public static native int getTaint(byte val);
+        public static native void addTaint(float val, int tag);
+        public static native int getTaint(float val);
+        public static native void addTaint(double val, int tag);
+        public static native int getTaint(double val);
         public static native int getTaint();
         public static native void addTaint(long val, int tag);
         public static native int getTaint(long val);
@@ -55,7 +59,11 @@ public final class Taint{
         public static native int getTaint(boolean[] val);
         public static native long[] addTaint(long[] val, int tag);
         public static native int getTaint(long[] val);
+        public static native float[] addTaint(float[] val, int tag);
+        public static native int getTaint(float[] val);
+        public static native double[] addTaint(double[] val, int tag);
+        public static native int getTaint(double[] val);
 
-        // not be able to use android.util.Slog,compile error
+        // not be able to use android.util.Slog,compile error, turn to native complement.
         public static native void log(String msg);                
 }

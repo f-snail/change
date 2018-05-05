@@ -79,6 +79,10 @@ enum InlineMethodOpcode : uint16_t {
   kIntrinsicTaintGetTaintBoolean,
   kIntrinsicTaintAddTaintByte,
   kIntrinsicTaintGetTaintByte,
+  kIntrinsicTaintAddTaintFloat,
+  kIntrinsicTaintGetTaintFloat,
+  kIntrinsicTaintAddTaintDouble,
+  kIntrinsicTaintGetTaintDouble,
   kIntrinsicTaintGetTaintVoid,
   kIntrinsicTaintAddTaintLong,
   kIntrinsicTaintGetTaintLong,
@@ -94,6 +98,10 @@ enum InlineMethodOpcode : uint16_t {
   kIntrinsicTaintGetTaintCharArray,
   kIntrinsicTaintAddTaintLongArray,
   kIntrinsicTaintGetTaintLongArray,
+  kIntrinsicTaintAddTaintFloatArray,
+  kIntrinsicTaintGetTaintFloatArray,
+  kIntrinsicTaintAddTaintDoubleArray,
+  kIntrinsicTaintGetTaintDoubleArray,
   // Taint end
 
   kInlineOpNop,

@@ -93,6 +93,10 @@
   V(TaintGetTaintBoolean, kStatic)      \
   V(TaintAddTaintByte, kStatic)      \
   V(TaintGetTaintByte, kStatic)      \
+  V(TaintAddTaintFloat, kStatic)      \
+  V(TaintGetTaintFloat, kStatic)      \
+  V(TaintAddTaintDouble, kStatic)      \
+  V(TaintGetTaintDouble, kStatic)      \
   V(TaintGetTaintVoid, kStatic)      \
   V(TaintAddTaintLong, kStatic)      \
   V(TaintGetTaintLong, kStatic)      \
@@ -108,6 +112,10 @@
   V(TaintGetTaintBooleanArray, kStatic)  \
   V(TaintAddTaintCharArray, kStatic)  \
   V(TaintGetTaintCharArray, kStatic)  \
-  //add Taint intrinsics function statement
+  V(TaintAddTaintFloatArray, kStatic)  \
+  V(TaintGetTaintFloatArray, kStatic)  \
+  V(TaintAddTaintDoubleArray, kStatic)  \
+  V(TaintGetTaintDoubleArray, kStatic)  \
+  // add Taint intrinsics function statement
 #endif  // ART_COMPILER_OPTIMIZING_INTRINSICS_LIST_H_
 #undef ART_COMPILER_OPTIMIZING_INTRINSICS_LIST_H_   // #define is only for lint.

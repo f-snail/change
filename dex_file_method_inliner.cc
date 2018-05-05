@@ -80,6 +80,10 @@ static constexpr bool kIntrinsicIsStatic[] = {
     true,   // kIntrinsicTaintAddTaintLong
     true,   // kIntrinsicTaintGetTaintLong
     true,   // kIntrinsicTaintGetTaintVoid
+    true,   // kIntrinsicTaintAddTaintFloat
+    true,   // kIntrinsicTaintGetTaintFloat
+    true,   // kIntrinsicTaintAddTaintDouble
+    true,   // kIntrinsicTaintGetTaintDouble
     true,   // kIntrinsicTaintAddTaintIntArray
     true,   // kIntrinsicTaintGetTaintIntArray
     true,   // kIntrinsicTaintAddTaintByteArray
@@ -92,6 +96,10 @@ static constexpr bool kIntrinsicIsStatic[] = {
     true,   // kIntrinsicTaintGetTaintBooleanArray
     true,   // kIntrinsicTaintAddTaintCharArray
     true,   // kIntrinsicTaintGetTaintCharArray
+    true,   // kIntrinsicTaintAddTaintFloatArray
+    true,   // kIntrinsicTaintGetTaintFloatArray
+    true,   // kIntrinsicTaintAddTaintDoubleArray
+    true,   // kIntrinsicTaintGetTaintDoubleArray
     /*Taint end*/
 };
 static_assert(arraysize(kIntrinsicIsStatic) == kInlineOpNop,
@@ -145,7 +153,11 @@ static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintByte], "TaintAddTaintByt
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintByte], "TaintGetTaintByte must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintVoid], "TaintGetTaintVoid must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintLong], "TaintAddTaintLong must be static");
-static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintLong], "GetTaintLong must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintLong], "TaintGetTaintLong must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintFloat], "TaintAddTaintFloat must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintFloat], "TaintGetTaintFloat must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintDouble], "TaintAddTaintDouble must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintDouble], "TaintGetTaintDouble must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintIntArray], "TaintAddTaintIntArray must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintIntArray], "TaintGetTaintIntArray must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintByteArray], "TaintAddTaintByteArray must be static");
@@ -154,10 +166,14 @@ static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintShortArray], "TaintAddTa
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintShortArray], "TaintGetTaintShortArray must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintLongArray], "TaintAddTaintLongArray must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintLongArray], "TaintGetTaintLongArray must be static");
-static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintIntArray], "TaintAddTaintBooleanArray must be static");
-static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintIntArray], "TaintGetTaintBooleanArray must be static");
-static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintIntArray], "TaintAddTaintCharArray must be static");
-static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintIntArray], "TaintGetTaintCharArray must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintBooleanArray], "TaintAddTaintBooleanArray must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintBooleanArray], "TaintGetTaintBooleanArray must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintCharArray], "TaintAddTaintCharArray must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintCharArray], "TaintGetTaintCharArray must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintFloatArray], "TaintAddTaintFloatArray must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintFloatArray], "TaintGetTaintFloatArray must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintDoubleArray], "TaintAddTaintDoubleArray must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintDoubleArray], "TaintGetTaintDoubleArray must be static");
 /*Taint end*/
 MIR* AllocReplacementMIR(MIRGraph* mir_graph, MIR* invoke) {
   MIR* insn = mir_graph->NewMIR();
@@ -204,6 +220,8 @@ const char* const DexFileMethodInliner::kClassCacheNames[] = {
     "[S",                      // kClassCacheJavaLangShortArray
     "[Z",                      // kClassCacheJavaLangBooleanArray
     "[J",                      // kClassCacheJavaLangLongArray
+    "[F",                      // kClassCacheJavaLangFloatArray
+    "[D",                      // kClassCacheJavaLangDoubleArray
     /*Taint end*/
     "Ljava/lang/Object;",      // kClassCacheJavaLangObject
     "Ljava/lang/ref/Reference;",   // kClassCacheJavaLangRefReference
@@ -432,6 +450,12 @@ const DexFileMethodInliner::ProtoDef DexFileMethodInliner::kProtoCacheDefs[] = {
     { kClassCacheInt, 1, { kClassCacheByte } },
     // kProtoCacheJI_J
     { kClassCacheLong, 2, { kClassCacheLong, kClassCacheInt } },
+    // kProtoCacheFI_V
+    { kClassCacheVoid, 2, { kClassCacheFloat, kClassCacheInt } },
+    // kProtoCacheDI_V
+    { kClassCacheVoid, 2, { kClassCacheDouble, kClassCacheInt } },
+    // kProtoCacheD_I
+    { kClassCacheInt, 1, { kClassCacheDouble } },
     // kProtoCacheV_I
     { kClassCacheInt, 0, { } },
     // kProtoCacheIntArrayI_V
@@ -460,6 +484,14 @@ const DexFileMethodInliner::ProtoDef DexFileMethodInliner::kProtoCacheDefs[] = {
     { kClassCacheJavaLangLongArray, 2, { kClassCacheJavaLangLongArray, kClassCacheInt } },
     // kProtoCacheLongArray_I
     { kClassCacheInt, 1, { kClassCacheJavaLangLongArray } },
+    // kProtoCacheFloatArrayI_FloatArray
+    { kClassCacheJavaLangFloatArray, 2, { kClassCacheJavaLangFloatArray, kClassCacheInt } },
+    // kProtoCacheFloatArray_I
+    { kClassCacheInt, 1, { kClassCacheJavaLangFloatArray } },
+    // kProtoCacheDoubleArrayI_DoubleArray
+    { kClassCacheJavaLangDoubleArray, 2, { kClassCacheJavaLangDoubleArray, kClassCacheInt } },
+    // kProtoCacheDoubleArray_I
+    { kClassCacheInt, 1, { kClassCacheJavaLangDoubleArray } },
     /*Taint end*/
 };
 
@@ -582,6 +614,10 @@ const DexFileMethodInliner::IntrinsicDef DexFileMethodInliner::kIntrinsicMethods
     INTRINSIC(JavaLangTaint, GetTaint, Z_I, kIntrinsicTaintGetTaintBoolean, 0),
     INTRINSIC(JavaLangTaint, AddTaint, BI_V, kIntrinsicTaintAddTaintByte, 0),
     INTRINSIC(JavaLangTaint, GetTaint, B_I, kIntrinsicTaintGetTaintByte, 0),
+    INTRINSIC(JavaLangTaint, AddTaint, FI_V, kIntrinsicTaintAddTaintFloat, 0),
+    INTRINSIC(JavaLangTaint, GetTaint, F_I, kIntrinsicTaintGetTaintFloat, 0),
+    INTRINSIC(JavaLangTaint, AddTaint, DI_V, kIntrinsicTaintAddTaintDouble, 0),
+    INTRINSIC(JavaLangTaint, GetTaint, D_I, kIntrinsicTaintGetTaintDouble, 0),
     INTRINSIC(JavaLangTaint, GetTaint, _I, kIntrinsicTaintGetTaintVoid, 0),
     INTRINSIC(JavaLangTaint, AddTaint, JI_J, kIntrinsicTaintAddTaintLong, 0),
     INTRINSIC(JavaLangTaint, GetTaint, J_I, kIntrinsicTaintGetTaintLong, 0),
@@ -591,7 +627,9 @@ const DexFileMethodInliner::IntrinsicDef DexFileMethodInliner::kIntrinsicMethods
     TAINT_INTRINSIC(ShortArray, ShortArray)
     TAINT_INTRINSIC(BooleanArray, BooleanArray)
     TAINT_INTRINSIC(CharArray, CharArray)
-    TAINT_INTRINSIC(CharArray, LongArray)
+    TAINT_INTRINSIC(LongArray, LongArray)
+    TAINT_INTRINSIC(FloatArray, FloatArray)
+    TAINT_INTRINSIC(DoubleArray, DoubleArray)
 
 #undef TAINT_INTRINSIC
 /*Taint end*/

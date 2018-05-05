@@ -33,6 +33,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+// Taint begin
+import java.lang.Taint;
+// Taint end
+
 /**
  * Sensor manager implementation that communicates with the built-in
  * system sensors.

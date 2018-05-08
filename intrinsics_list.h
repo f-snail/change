@@ -97,7 +97,7 @@
   V(TaintGetTaintFloat, kStatic)      \
   V(TaintAddTaintDouble, kStatic)      \
   V(TaintGetTaintDouble, kStatic)      \
-  V(TaintGetTaintVoid, kStatic)      \
+  V(TaintGetAllTaint, kStatic)      \
   V(TaintAddTaintLong, kStatic)      \
   V(TaintGetTaintLong, kStatic)      \
   V(TaintAddTaintIntArray, kStatic)  \

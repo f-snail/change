@@ -126,9 +126,9 @@ class DexFileMethodInliner {
       kClassCacheJavaLangCharArray,
       kClassCacheJavaLangIntArray,
       /*Taint*/
-      kClassCacheJavaLangLongArray,
       kClassCacheJavaLangShortArray,
       kClassCacheJavaLangBooleanArray,
+      kClassCacheJavaLangLongArray,
       kClassCacheJavaLangFloatArray,
       kClassCacheJavaLangDoubleArray,
       /*Taint end*/
@@ -219,6 +219,7 @@ class DexFileMethodInliner {
       /*Taint*/
       kNameCacheAddTaint,
       kNameCacheGetTaint,
+      kNameCacheGetAllTaint,
       /*Taint end*/
       kNameCacheLast
     };
@@ -295,11 +296,13 @@ class DexFileMethodInliner {
       kProtoCacheZ_I,
       kProtoCacheBI_V,
       kProtoCacheB_I,
+      /*kProtoCacheJI_V,
+       *kProtoCacheJ_I, */
+      /*getAllTaint*/
+      kProtoCacheI_J,
       kProtoCacheFI_V,
       kProtoCacheDI_V,
       kProtoCacheD_I,
-      kProtoCacheV_I,
-      kProtoCacheJI_J,
       kProtoCacheIntArrayI_V,
       kProtoCacheIntArrayI_IntArray,
       kProtoCacheIntArray_I,

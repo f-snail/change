@@ -238,7 +238,6 @@ static void GetTaintFromTarget(LocationSummary* locations, bool isFloat, vixl::M
 
         unsigned in_code = input.reg();  // the number of register that contains the value that we need to find whether it has taint.
         Register t_out = XRegisterFrom(output);  // the register that contains the returned taint level
-        DCHECK(in_code != 63 && t_out.code() != 63);
         Register taint_str;
 
         if (isFloat)
@@ -292,19 +291,25 @@ void IntrinsicCodeGeneratorARM64::VisitTaintAddTaintBoolean(HInvoke* invoke) { V
 void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintBoolean(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
 void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintBoolean(HInvoke* invoke) { VisitTaintGetTaintInt(invoke); }
 
-void IntrinsicLocationsBuilderARM64::VisitTaintGetTaintVoid(HInvoke* invoke) {
-        LocationSummary* locations = new (arena_) LocationSummary(invoke,
-                                                  LocationSummary::kCall,
-                                                  kIntrinsified);
-        locations->SetOut(Location::RequiresRegister(), Location::kNoOutputOverlap);
-}
-void IntrinsicCodeGeneratorARM64::VisitTaintGetTaintVoid(HInvoke* invoke) {
+void IntrinsicLocationsBuilderARM64::VisitTaintGetAllTaint(HInvoke* invoke) { GetTaintLoc(arena_, invoke); }
+
+void IntrinsicCodeGeneratorARM64::VisitTaintGetAllTaint(HInvoke* invoke) {
         LocationSummary* locations = invoke->GetLocations();
         vixl::MacroAssembler* masm = GetVIXLAssembler();
+        vixl::Label exe, exit;
 
+        Location input = locations->InAt(0);
+        Register in = XRegisterFrom(input);
         Register t_out = XRegisterFrom(locations->Out());
         Register taint_str1 = Register::XRegFromCode(taint_code1);
+        Register taint_str2 = Register::XRegFromCode(taint_code2);
+        __ Cmp(in, 0);
+        __ B(&exe, hi);
         __ Mov(t_out, taint_str1);
+        __ B(&exit);
+        __ Bind(&exe);
+        __ Mov(t_out, taint_str2);
+        __ B(&exit);
 }
 
 /*Array type*/
@@ -345,6 +350,7 @@ static void AddTaintToTarget_Array(LocationSummary* locations, bool isFloat, vix
 
         UseScratchRegisterScope temps(masm);
         Register temp = temps.AcquireX();
+        // VLOG(TA64) << "intrinsic func AddTaintToTarget_Array temp reg'code " << temp.code();
         __ Mov(temp, 0);
         if (out_code == 0)
                 __ Bfm(taint_str, temp, 0, 1);
@@ -353,7 +359,10 @@ static void AddTaintToTarget_Array(LocationSummary* locations, bool isFloat, vix
         __ Orr(taint_str, taint_str, Operand(t_input, LSL, 2 * out_code));
 
         // move the value in parameter 0 to the returned register
-        __ Mov(DRegisterFrom(locations->Out()), DRegisterFrom(locations->InAt(0)));
+        if (isFloat)
+                __ Mov(DRegisterFrom(locations->Out()), DRegisterFrom(locations->InAt(0)));
+        else
+                __ Mov(XRegisterFrom(locations->Out()), XRegisterFrom(locations->InAt(0)));
 }
 
 
@@ -892,8 +901,7 @@ void IntrinsicCodeGeneratorARM64::VisitMemoryPeekByte(HInvoke* invoke) {
   vixl::MacroAssembler* masm = GetVIXLAssembler();
   __ Ldrsb(WRegisterFrom(invoke->GetLocations()->Out()),
           AbsoluteHeapOperandFrom(invoke->GetLocations()->InAt(0), 0));
-  // TEST
-  VLOG(TA64) << "The intrinsics completaion of PeekByte() in Memory.java";
+  // VLOG(TA64) << "The intrinsics completaion of PeekByte() in Memory.java";
 }
 
 void IntrinsicLocationsBuilderARM64::VisitMemoryPeekIntNative(HInvoke* invoke) {

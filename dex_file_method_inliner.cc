@@ -79,7 +79,7 @@ static constexpr bool kIntrinsicIsStatic[] = {
     true,   // kIntrinsicTaintGetTaintByte
     true,   // kIntrinsicTaintAddTaintLong
     true,   // kIntrinsicTaintGetTaintLong
-    true,   // kIntrinsicTaintGetTaintVoid
+    true,   // kIntrinsicTaintGetAllTaint
     true,   // kIntrinsicTaintAddTaintFloat
     true,   // kIntrinsicTaintGetTaintFloat
     true,   // kIntrinsicTaintAddTaintDouble
@@ -90,12 +90,12 @@ static constexpr bool kIntrinsicIsStatic[] = {
     true,   // kIntrinsicTaintGetTaintByteArray
     true,   // kIntrinsicTaintAddTaintShortArray
     true,   // kIntrinsicTaintGetTaintShortArray
-    true,   // kIntrinsicTaintAddTaintLongArray
-    true,   // kIntrinsicTaintGetTaintLongArray
     true,   // kIntrinsicTaintAddTaintBooleanArray
     true,   // kIntrinsicTaintGetTaintBooleanArray
     true,   // kIntrinsicTaintAddTaintCharArray
     true,   // kIntrinsicTaintGetTaintCharArray
+    true,   // kIntrinsicTaintAddTaintLongArray
+    true,   // kIntrinsicTaintGetTaintLongArray
     true,   // kIntrinsicTaintAddTaintFloatArray
     true,   // kIntrinsicTaintGetTaintFloatArray
     true,   // kIntrinsicTaintAddTaintDoubleArray
@@ -151,7 +151,7 @@ static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintBoolean], "TaintAddTaint
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintBoolean], "TaintGetTaintBoolean must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintByte], "TaintAddTaintByte must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintByte], "TaintGetTaintByte must be static");
-static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintVoid], "TaintGetTaintVoid must be static");
+static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetAllTaint], "TaintGetAllTaint must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintLong], "TaintAddTaintLong must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintGetTaintLong], "TaintGetTaintLong must be static");
 static_assert(kIntrinsicIsStatic[kIntrinsicTaintAddTaintFloat], "TaintAddTaintFloat must be static");
@@ -303,6 +303,7 @@ const char* const DexFileMethodInliner::kNameCacheNames[] = {
     /*Taint*/
     "addTaint",              // kNameCacheAddTaint
     "getTaint",              // kNameCacheGetTaint
+    "getAllTaint",           // kNameCacheGetAllTaint
     /*Taint end*/
 };
 
@@ -448,16 +449,16 @@ const DexFileMethodInliner::ProtoDef DexFileMethodInliner::kProtoCacheDefs[] = {
     { kClassCacheVoid, 2, { kClassCacheByte, kClassCacheInt } },
     // kProtoCacheB_I
     { kClassCacheInt, 1, { kClassCacheByte } },
-    // kProtoCacheJI_J
-    { kClassCacheLong, 2, { kClassCacheLong, kClassCacheInt } },
+    // kProtoCacheJI_V
+    // { kClassCacheVoid, 2, { kClassCacheLong, kClassCacheInt } },
+    // kProtoCacheI_J / getAllTaint
+    { kClassCacheLong, 1, { kClassCacheInt } },
     // kProtoCacheFI_V
     { kClassCacheVoid, 2, { kClassCacheFloat, kClassCacheInt } },
     // kProtoCacheDI_V
     { kClassCacheVoid, 2, { kClassCacheDouble, kClassCacheInt } },
     // kProtoCacheD_I
     { kClassCacheInt, 1, { kClassCacheDouble } },
-    // kProtoCacheV_I
-    { kClassCacheInt, 0, { } },
     // kProtoCacheIntArrayI_V
     { kClassCacheVoid, 2, { kClassCacheJavaLangIntArray, kClassCacheInt } },
     // kProtoCacheIntArrayI_IntArray
@@ -499,10 +500,6 @@ const DexFileMethodInliner::IntrinsicDef DexFileMethodInliner::kIntrinsicMethods
 #define INTRINSIC(c, n, p, o, d) \
     { { kClassCache ## c, kNameCache ## n, kProtoCache ## p }, { o, kInlineIntrinsic, { d } } }
 
-    /*Taint*/
-    // INTRINSIC(JavaLangTaint, AddTaint, TI_V /*ProtoCache TODO*/, kIntrinsicAddTaint, 0 /*d TODO*/),
-    // INTRINSIC(JavaLangTaint, GetTaint, TI_V /*ProtoCache TODO*/, kIntrinsicGetTaint, 0 /*d TODO*/),
-    /*Taint end*/
     INTRINSIC(JavaLangDouble, DoubleToRawLongBits, D_J, kIntrinsicDoubleCvt, 0),
     INTRINSIC(JavaLangDouble, LongBitsToDouble, J_D, kIntrinsicDoubleCvt, kIntrinsicFlagToFloatingPoint),
     INTRINSIC(JavaLangFloat, FloatToRawIntBits, F_I, kIntrinsicFloatCvt, 0),
@@ -618,8 +615,8 @@ const DexFileMethodInliner::IntrinsicDef DexFileMethodInliner::kIntrinsicMethods
     INTRINSIC(JavaLangTaint, GetTaint, F_I, kIntrinsicTaintGetTaintFloat, 0),
     INTRINSIC(JavaLangTaint, AddTaint, DI_V, kIntrinsicTaintAddTaintDouble, 0),
     INTRINSIC(JavaLangTaint, GetTaint, D_I, kIntrinsicTaintGetTaintDouble, 0),
-    INTRINSIC(JavaLangTaint, GetTaint, _I, kIntrinsicTaintGetTaintVoid, 0),
-    INTRINSIC(JavaLangTaint, AddTaint, JI_J, kIntrinsicTaintAddTaintLong, 0),
+    INTRINSIC(JavaLangTaint, GetAllTaint, I_J, kIntrinsicTaintGetAllTaint, 0),
+    INTRINSIC(JavaLangTaint, AddTaint, JI_V, kIntrinsicTaintAddTaintLong, 0),
     INTRINSIC(JavaLangTaint, GetTaint, J_I, kIntrinsicTaintGetTaintLong, 0),
 
     TAINT_INTRINSIC(IntArray, IntArray)

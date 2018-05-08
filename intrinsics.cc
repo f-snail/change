@@ -97,8 +97,8 @@ static Intrinsics GetIntrinsic(InlineMethod method) {
                   return Intrinsics::kTaintAddTaintDouble;
           case kIntrinsicTaintGetTaintDouble:
                   return Intrinsics::kTaintGetTaintDouble;
-          case kIntrinsicTaintGetTaintVoid:
-                  return Intrinsics::kTaintGetTaintVoid;
+          case kIntrinsicTaintGetAllTaint:
+                  return Intrinsics::kTaintGetAllTaint;
           case kIntrinsicTaintAddTaintLong:
                   return Intrinsics::kTaintAddTaintLong;
           case kIntrinsicTaintGetTaintLong:

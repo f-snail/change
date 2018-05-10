@@ -652,11 +652,12 @@ static inline dwarf::Reg DWARFReg(CPURegister reg) {
   }
 }
 
-void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
+/*
+void Arm64Assembler::SpillRegisters_t(vixl::CPURegList registers, int offset) {
   int size = registers.RegisterSizeInBytes();
   const Register sp = vixl_masm_->StackPointer();
   // Taint : taints follow the spilled registers to the memory, so the register could only be moved as one register + one taint.
-  /*
+  / *
   while (registers.Count() >= 2) {
     const CPURegister& dst0 = registers.PopLowestIndex();
     const CPURegister& dst1 = registers.PopLowestIndex();
@@ -673,7 +674,7 @@ void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
     ___ Str(dst0, MemOperand(sp, offset));
     cfi_.RelOffset(DWARFReg(dst0), offset);
   }
-  */
+  * /
 
   // Taint begin
   Register taint_str1 = Register::XRegFromCode(taint_code1);
@@ -715,12 +716,14 @@ void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
 
   DCHECK(registers.IsEmpty());
 }
+*/
 
-void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
+/*
+void Arm64Assembler::UnspillRegisters_t(vixl::CPURegList registers, int offset) {
   int size = registers.RegisterSizeInBytes();
   const Register sp = vixl_masm_->StackPointer();
 
-  /*
+  / *
   while (registers.Count() >= 2) {
     const CPURegister& dst0 = registers.PopLowestIndex();
     const CPURegister& dst1 = registers.PopLowestIndex();
@@ -737,7 +740,7 @@ void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
     ___ Ldr(dst0, MemOperand(sp, offset));
     cfi_.Restore(DWARFReg(dst0));
   }
-  */
+  * /
 
   // Taint begin
   Register taint_str1 = Register::XRegFromCode(taint_code1);
@@ -778,6 +781,45 @@ void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
   }
   // Taint end
 
+  DCHECK(registers.IsEmpty());
+}
+*/
+
+void Arm64Assembler::SpillRegisters(vixl::CPURegList registers, int offset) {
+  int size = registers.RegisterSizeInBytes();
+  const Register sp = vixl_masm_->StackPointer();
+  while (registers.Count() >= 2) {
+    const CPURegister& dst0 = registers.PopLowestIndex();
+    const CPURegister& dst1 = registers.PopLowestIndex();
+    ___ Stp(dst0, dst1, MemOperand(sp, offset));
+    cfi_.RelOffset(DWARFReg(dst0), offset);
+    cfi_.RelOffset(DWARFReg(dst1), offset + size);
+    offset += 2 * size;
+  }
+  if (!registers.IsEmpty()) {
+     const CPURegister& dst0 = registers.PopLowestIndex();
+     ___ Str(dst0, MemOperand(sp, offset));
+     cfi_.RelOffset(DWARFReg(dst0), offset);
+  }
+  DCHECK(registers.IsEmpty());
+}
+
+void Arm64Assembler::UnspillRegisters(vixl::CPURegList registers, int offset) {
+  int size = registers.RegisterSizeInBytes();
+  const Register sp = vixl_masm_->StackPointer();
+  while (registers.Count() >= 2) {
+    const CPURegister& dst0 = registers.PopLowestIndex();
+    const CPURegister& dst1 = registers.PopLowestIndex();
+    ___ Ldp(dst0, dst1, MemOperand(sp, offset));
+    cfi_.Restore(DWARFReg(dst0));
+    cfi_.Restore(DWARFReg(dst1));
+    offset += 2 * size;
+  }
+  if (!registers.IsEmpty()) {
+    const CPURegister& dst0 = registers.PopLowestIndex();
+    ___ Ldr(dst0, MemOperand(sp, offset));
+    cfi_.Restore(DWARFReg(dst0));
+  }
   DCHECK(registers.IsEmpty());
 }
 

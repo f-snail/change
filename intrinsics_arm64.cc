@@ -449,6 +449,7 @@ static void MoveIntToFP(LocationSummary* locations, bool is64bit, vixl::MacroAss
   __ Fmov(is64bit ? DRegisterFrom(output) : SRegisterFrom(output),
           is64bit ? XRegisterFrom(input) : WRegisterFrom(input));
 
+  // VLOG(TA64) << "MoveIntToFP's out reg is " << output.reg();
   // Taint
   Register taint_str1 = Register::XRegFromCode(taint_code1);
   Register taint_str2 = Register::XRegFromCode(taint_code2);
@@ -471,6 +472,7 @@ void IntrinsicLocationsBuilderARM64::VisitDoubleLongBitsToDouble(HInvoke* invoke
 void IntrinsicCodeGeneratorARM64::VisitDoubleDoubleToRawLongBits(HInvoke* invoke) {
   MoveFPToInt(invoke->GetLocations(), true, GetVIXLAssembler());
 }
+
 void IntrinsicCodeGeneratorARM64::VisitDoubleLongBitsToDouble(HInvoke* invoke) {
   MoveIntToFP(invoke->GetLocations(), true, GetVIXLAssembler());
 }

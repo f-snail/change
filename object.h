@@ -75,7 +75,10 @@ class MANAGED LOCKABLE Object {
 
   // Size of an instance of java.lang.Object.
   static constexpr uint32_t InstanceSize() {
-    return sizeof(Object);
+    // Taint begin. increase the size to store taint of Array.etc.
+    // return sizeof(Object);
+    return 2 * sizeof(Object);
+    // Taint end
   }
 
   static MemberOffset ClassOffset() {

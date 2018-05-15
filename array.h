@@ -66,12 +66,15 @@ class MANAGED Array : public Object {
   }
 
   // Taint begin
-  ALWAYS_INLINE int32_t GetTaint() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_)
-  {
+  template<VerifyObjectFlags kVerifyFlags = kDefaultVerifyFlags>
+  ALWAYS_INLINE int32_t GetTaint() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
      return GetField32<kVerifyFlags>(OFFSET_OF_OBJECT_MEMBER(Array, taint));
   }
 
   /* TODO: SetTaint() */
+  void SetTaint(int32_t new_taint) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
+     SetField32<false, false, kVerifyNone>(OFFSET_OF_OBJECT_MEMBER(Array, taint), new_taint);
+  }
 
   static MemberOffset TaintOffset() {
      return OFFSET_OF_OBJECT_MEMBER(Array, taint);

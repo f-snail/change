@@ -17,7 +17,11 @@
 /*
  * Taint: about array/object array/string etc.
  */
+#ifndef ART_RUNTIME_TAINT_H_
+#define ART_RUNTIME_TAINT_H_
 
-struct Taint {
-        unsigned int tag;
-}
+typedef struct Taint {
+        int32_t tag;
+} Taint;
+
+#endif  // ART_RUNTIME_TAINT_H_

@@ -56,6 +56,11 @@ class MANAGED String FINAL : public Object {
   }
 
   /* TODO: SetTaint() */
+  void SetTaint(int32_t new_taint) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_)  {
+    SetField32<false, false>(OFFSET_OF_OBJECT_MEMBER(String, taint), new_taint);
+  }
+
+  template<VerifyObjectFlags kVerifyFlags = kDefaultVerifyFlags>
   int32_t GetTaint() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
     return GetField32<kVerifyFlags>(OFFSET_OF_OBJECT_MEMBER(String, taint));
   }

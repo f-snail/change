@@ -21,6 +21,7 @@
 #include "gc/allocator_type.h"
 #include "object.h"
 #include "object_callbacks.h"
+#include "Taint.h"
 
 namespace art {
 
@@ -64,6 +65,19 @@ class MANAGED Array : public Object {
     return OFFSET_OF_OBJECT_MEMBER(Array, length_);
   }
 
+  // Taint begin
+  ALWAYS_INLINE int32_t GetTaint() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_)
+  {
+     return GetField32<kVerifyFlags>(OFFSET_OF_OBJECT_MEMBER(Array, taint));
+  }
+
+  /* TODO: SetTaint() */
+
+  static MemberOffset TaintOffset() {
+     return OFFSET_OF_OBJECT_MEMBER(Array, taint);
+  }
+  // Taint end
+
   static MemberOffset DataOffset(size_t component_size);
 
   void* GetRawData(size_t component_size, int32_t index)
@@ -97,6 +111,9 @@ class MANAGED Array : public Object {
   int32_t length_;
   // Marker for the data (used by generated code)
   uint32_t first_element_[0];
+  // Taint begin
+  Taint taint;
+  // Taint end
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(Array);
 };

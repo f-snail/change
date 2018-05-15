@@ -22,6 +22,7 @@
 #include "object.h"
 #include "object_callbacks.h"
 #include "read_barrier_option.h"
+#include "Taint.h"
 
 namespace art {
 
@@ -55,6 +56,12 @@ class MANAGED Field : public AccessibleObject {
   uint32_t GetAccessFlags() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
     return GetField32(OFFSET_OF_OBJECT_MEMBER(Field, access_flags_));
   }
+
+  // Taint begin
+  uint32_t GetTaint() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
+    return GetField32(OFFSET_OF_OBJECT_MEMBER(Field, taint));
+  }
+  // Taint end
 
   bool IsStatic() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
     return (GetAccessFlags() & kAccStatic) != 0;
@@ -103,6 +110,8 @@ class MANAGED Field : public AccessibleObject {
   int32_t access_flags_;
   int32_t dex_field_index_;
   int32_t offset_;
+  // Taint
+  Taint taint;
 
   template<bool kTransactionActive>
   void SetDeclaringClass(mirror::Class* c) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {

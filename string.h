@@ -21,6 +21,7 @@
 #include "gc/allocator_type.h"
 #include "object.h"
 #include "object_callbacks.h"
+#include "Taint.h"
 
 namespace art {
 
@@ -48,6 +49,17 @@ class MANAGED String FINAL : public Object {
   static MemberOffset ValueOffset() {
     return OFFSET_OF_OBJECT_MEMBER(String, value_);
   }
+
+  // Taint begin
+  static MemberOffset TaintOffset() {
+    return OFFSET_OF_OBJECT_MEMBER(String, taint);
+  }
+
+  /* TODO: SetTaint() */
+  int32_t GetTaint() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
+    return GetField32<kVerifyFlags>(OFFSET_OF_OBJECT_MEMBER(String, taint));
+  }
+  // Taint end
 
   uint16_t* GetValue() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
     return &value_[0];
@@ -177,6 +189,9 @@ class MANAGED String FINAL : public Object {
   uint16_t value_[0];
 
   static GcRoot<Class> java_lang_String_;
+
+  // Taint
+  Taint taint;
 
   friend struct art::StringOffsets;  // for verifying offset information
   ART_FRIEND_TEST(ObjectTest, StringLength);  // for SetOffset and SetCount

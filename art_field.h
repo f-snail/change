@@ -86,6 +86,18 @@ class ArtField FINAL {
 
   void SetOffset(MemberOffset num_bytes) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_);
 
+  // Taint begin
+  MemberOffset GetTaintOffset() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
+  }
+
+  static MemberOffset TaintOffsetOffset() {
+          return MemberOffset(OFFSETOF_MEMBER(ArtField, taint_offset_));
+  }
+
+  void SetTaintOffset (MemberOffset num_bytes) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
+  }
+  // Taint end
+
   // field access, null object for static fields
   uint8_t GetBoolean(mirror::Object* object) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_);
 
@@ -207,6 +219,10 @@ class ArtField FINAL {
 
   // Offset of field within an instance or in the Class' static fields
   uint32_t offset_;
+
+  // Taint: offset of taint field
+  uint32_t taint_offset;
+
 };
 
 }  // namespace art

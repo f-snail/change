@@ -26,6 +26,9 @@
 #include "primitive.h"
 #include "read_barrier_option.h"
 
+// Taint
+#include "Taint.h"
+
 namespace art {
 
 class DexFile;
@@ -88,6 +91,8 @@ class ArtField FINAL {
 
   // Taint begin
   MemberOffset GetTaintOffset() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
+          DCHECK(GetDeclaringClass()->IsLoaded() || GetDeclaringClass()->IsErroneous());
+          return MemberOffset(offset_);
   }
 
   static MemberOffset TaintOffsetOffset() {
@@ -95,6 +100,8 @@ class ArtField FINAL {
   }
 
   void SetTaintOffset (MemberOffset num_bytes) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
+          DCHECK(GetDeclaringClass()->IsLoaded() || GetDeclaringClass()->IsErroneous());
+          taint_offset_ = num_bytes;
   }
   // Taint end
 
@@ -221,7 +228,7 @@ class ArtField FINAL {
   uint32_t offset_;
 
   // Taint: offset of taint field
-  uint32_t taint_offset;
+  uint32_t taint_offset_;
 
 };
 

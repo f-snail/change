@@ -5181,6 +5181,12 @@ bool ClassLinker::LinkFields(Thread* self, Handle<mirror::Class> klass, bool is_
   // otherwise we could end up with suboptimal gap fills.
   ShuffleForward<8>(&current_field, &field_offset, &grouped_and_sorted_fields, &gaps);
   ShuffleForward<4>(&current_field, &field_offset, &grouped_and_sorted_fields, &gaps);
+
+  // Taint: add taint tag after the 4-byte field area, because the taint tag is 4-byte too.
+  field_offset = MemberOffset(field_offset.Uint32Value() +
+                              num_fields * sizeof(int32_t);
+  // Taint end
+
   ShuffleForward<2>(&current_field, &field_offset, &grouped_and_sorted_fields, &gaps);
   ShuffleForward<1>(&current_field, &field_offset, &grouped_and_sorted_fields, &gaps);
   CHECK(grouped_and_sorted_fields.empty()) << "Missed " << grouped_and_sorted_fields.size() <<

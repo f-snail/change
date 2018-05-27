@@ -3153,7 +3153,9 @@ class HInstanceFieldGet : public HExpression<1> {
   HInstanceFieldGet(HInstruction* value,
                     Primitive::Type field_type,
                     MemberOffset field_offset,
-                    bool is_volatile)
+                    bool is_volatile,
+                    /*Taint*/
+                    MemberOffset taint_offset)
       : HExpression(field_type, SideEffects::DependsOnSomething()),
         /* Taint 
         field_info_(field_offset, field_type, is_volatile) { */
@@ -3198,7 +3200,9 @@ class HInstanceFieldSet : public HTemplateInstruction<2> {
                     HInstruction* value,
                     Primitive::Type field_type,
                     MemberOffset field_offset,
-                    bool is_volatile)
+                    bool is_volatile,
+                    /*Taint*/
+                    MemberOffset taint_offset)
       : HTemplateInstruction(SideEffects::ChangesSomething()),
         /* Taint
         field_info_(field_offset, field_type, is_volatile) { */
@@ -3581,7 +3585,9 @@ class HStaticFieldGet : public HExpression<1> {
   HStaticFieldGet(HInstruction* cls,
                   Primitive::Type field_type,
                   MemberOffset field_offset,
-                  bool is_volatile)
+                  bool is_volatile,
+                  /*Taint*/
+                  MemberOffset taint_offset)
       : HExpression(field_type, SideEffects::DependsOnSomething()),
         /* Taint
         field_info_(field_offset, field_type, is_volatile) { */
@@ -3623,7 +3629,9 @@ class HStaticFieldSet : public HTemplateInstruction<2> {
                   HInstruction* value,
                   Primitive::Type field_type,
                   MemberOffset field_offset,
-                  bool is_volatile)
+                  bool is_volatile,
+                  /*Taint*/
+                  MemberOffset taint_offset)          
       : HTemplateInstruction(SideEffects::ChangesSomething()),
         /* Taint
         field_info_(field_offset, field_type, is_volatile) { */

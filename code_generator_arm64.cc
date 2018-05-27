@@ -1622,22 +1622,53 @@ void InstructionCodeGeneratorARM64::HandleFieldGet(HInstruction* instruction,
   BlockPoolsScope block_pools(GetVIXLAssembler());
 
   MemOperand field = HeapOperand(InputRegisterAt(instruction, 0), field_info.GetFieldOffset());
+
+  // Taint
+  MemOperand t_field = HeapOperand(InputRegisterAt(instruction, 0), field_info.GetTaintOffset());
+  UseScratchRegisterScope temps(GetVIXLAssembler());
+  Register temp = temps.AcquireW();
+  Primitive::Type type = instruction->GetType();
+  Register taint_str;
+  if (type == Primitive::kPrimFloat || type == Primitive::kPrimDouble)
+          taint_str = Register::XRegFromCode(taint_code2);
+  else
+          taint_str = Register::XRegFromCode(taint_code1);
+
   bool use_acquire_release = codegen_->GetInstructionSetFeatures().PreferAcquireRelease();
 
   if (field_info.IsVolatile()) {
     if (use_acquire_release) {
       // NB: LoadAcquire will record the pc info if needed.
       codegen_->LoadAcquire(instruction, OutputCPURegister(instruction), field);
+
+      // Taint
+      codegen_->LoadAcquire(instruction, temp, t_field);
+
     } else {
       codegen_->Load(field_info.GetFieldType(), OutputCPURegister(instruction), field);
+
+      // Taint
+      codegen_->Load(field_info.GetFieldType(), temp, t_field);
+
       codegen_->MaybeRecordImplicitNullCheck(instruction);
       // For IRIW sequential consistency kLoadAny is not sufficient.
       GenerateMemoryBarrier(MemBarrierKind::kAnyAny);
     }
   } else {
     codegen_->Load(field_info.GetFieldType(), OutputCPURegister(instruction), field);
+
+    // Taint
+    codegen_->Load(field_info.GetFieldType(), temp, t_field);
+
     codegen_->MaybeRecordImplicitNullCheck(instruction);
   }
+
+  // Taint
+  unsigned out_code = OutputCPURegister(instruction).code();
+  if (out_code == 0)
+          __ Bfm(taint_str, temp.X(), 0, 1);
+  else
+          __ Bfm(taint_str, temp.X(), 64 - 2 * out_code, 1);
 }
 
 void LocationsBuilderARM64::HandleFieldSet(HInstruction* instruction) {
@@ -1662,18 +1693,39 @@ void InstructionCodeGeneratorARM64::HandleFieldSet(HInstruction* instruction,
   Primitive::Type field_type = field_info.GetFieldType();
   bool use_acquire_release = codegen_->GetInstructionSetFeatures().PreferAcquireRelease();
 
+  // Taint
+  Offset t_offset = field_info.GetTaintOffset();
+  UseScratchRegisterScope temps(GetVIXLAssembler());
+  Register temp = temps.AcquireX();
+  unsigned in_code = value.code();
+  Register taint_str;
+  if (type == Primitive::kPrimFloat || type == Primitive::kPrimDouble)
+          taint_str = Register::XRegFromCode(taint_code2);
+  else
+          taint_str = Register::XRegFromCode(taint_code1);
+  __ Ubfm(temp, taint_str, in_code * 2, in_code * 2 + 1);
+
   if (field_info.IsVolatile()) {
     if (use_acquire_release) {
       codegen_->StoreRelease(field_type, value, HeapOperand(obj, offset));
+      // Taint
+      codegen_->StoreRelease(field_type, temp.W(), HeapOperand(obj, t_offset));
+
       codegen_->MaybeRecordImplicitNullCheck(instruction);
     } else {
       GenerateMemoryBarrier(MemBarrierKind::kAnyStore);
       codegen_->Store(field_type, value, HeapOperand(obj, offset));
+      // Taint
+      codegen_->Store(field_type, temp.W(), HeapOperand(obj, t_offset));
+
       codegen_->MaybeRecordImplicitNullCheck(instruction);
       GenerateMemoryBarrier(MemBarrierKind::kAnyAny);
     }
   } else {
     codegen_->Store(field_type, value, HeapOperand(obj, offset));
+    // Taint
+    codegen_->Store(field_type, temp.W(), HeapOperand(obj, t_offset));
+
     codegen_->MaybeRecordImplicitNullCheck(instruction);
   }
 
@@ -1712,7 +1764,6 @@ void InstructionCodeGeneratorARM64::HandleBinaryOp(HBinaryOperation* instr) {
       UseScratchRegisterScope temps(GetVIXLAssembler());
       Register temp1 = temps.AcquireX();
       Register temp2 = temps.AcquireX();
-      // VLOG(TA64) << "HandleBinaryOp: the temp regs' codes are " << temp1.code() << temp2.code();
 
       vixl::Label exe, exit;
 #endif

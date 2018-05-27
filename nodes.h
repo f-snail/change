@@ -3144,7 +3144,7 @@ class FieldInfo : public ValueObject {
   const MemberOffset field_offset_;
   const Primitive::Type field_type_;
   const bool is_volatile_;
-  // Taint 
+  // Taint
   const MemberOffset taint_offset_;
 };
 

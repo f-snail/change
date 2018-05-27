@@ -854,13 +854,17 @@ bool HGraphBuilder::BuildInstanceFieldAccess(const Instruction& instruction,
         value,
         field_type,
         resolved_field->GetOffset(),
-        resolved_field->IsVolatile()));
+        resolved_field->IsVolatile(),
+        /*Taint*/
+        resolved_field->GetTaintOffset()));
   } else {
     current_block_->AddInstruction(new (arena_) HInstanceFieldGet(
         current_block_->GetLastInstruction(),
         field_type,
         resolved_field->GetOffset(),
-        resolved_field->IsVolatile()));
+        resolved_field->IsVolatile(),
+        /*Taint*/
+        resolved_field->GetTaintOffset()));
 
     UpdateLocal(source_or_dest_reg, current_block_->GetLastInstruction());
   }
@@ -971,11 +975,15 @@ bool HGraphBuilder::BuildStaticFieldAccess(const Instruction& instruction,
     DCHECK_EQ(value->GetType(), field_type);
     current_block_->AddInstruction(
         new (arena_) HStaticFieldSet(cls, value, field_type, resolved_field->GetOffset(),
-            resolved_field->IsVolatile()));
+            resolved_field->IsVolatile(),
+            /*Taint*/
+            resolved_field->GetTaintOffset()));
   } else {
     current_block_->AddInstruction(
         new (arena_) HStaticFieldGet(cls, field_type, resolved_field->GetOffset(),
-            resolved_field->IsVolatile()));
+            resolved_field->IsVolatile(),
+            /*Taint*/
+            resolved_field->GetTaintOffset()));
     UpdateLocal(source_or_dest_reg, current_block_->GetLastInstruction());
   }
   return true;

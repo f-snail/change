@@ -3631,7 +3631,7 @@ class HStaticFieldSet : public HTemplateInstruction<2> {
                   MemberOffset field_offset,
                   bool is_volatile,
                   /*Taint*/
-                  MemberOffset taint_offset)          
+                  MemberOffset taint_offset)
       : HTemplateInstruction(SideEffects::ChangesSomething()),
         /* Taint
         field_info_(field_offset, field_type, is_volatile) { */

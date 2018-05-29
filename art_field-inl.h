@@ -59,6 +59,12 @@ inline MemberOffset ArtField::GetOffsetDuringLinking() {
   return MemberOffset(offset_);
 }
 
+// Taint
+inline MemberOffset ArtField::GetTaintOffset() {
+        DCHECK(GetDeclaringClass()->IsResolved() || GetDeclaringClass()->IsErroneous());
+        return MemberOffset(offset_);
+}
+
 inline uint32_t ArtField::Get32(mirror::Object* object) {
   DCHECK(object != nullptr) << PrettyField(this);
   DCHECK(!IsStatic() || (object == GetDeclaringClass()) || !Runtime::Current()->IsStarted());
@@ -117,6 +123,23 @@ inline void ArtField::SetObj(mirror::Object* object, mirror::Object* new_value) 
   } else {
     object->SetFieldObject<kTransactionActive>(GetOffset(), new_value);
   }
+}
+
+// Taint
+inline uint32_t ArtField::GetTaint(mirror::Object* object) {
+    if (UNLIKELY(IsVolatile())) {
+       return object->GetField32Volatile(GetTaintOffset());
+    }
+    return object->GetField32(GetTaintOffset());
+}
+
+template<bool kTransactionActive>
+inline void ArtField::SetTaint(mirror::Object* object, uint32_t tag) {
+    if (UNLIKELY(IsVolatile())) {
+       object->SetField32Volatile<kTransactionActive>(GetTaintOffset(), tag);
+    } else {
+        object->SetField32<kTransactionActive>(GetTaintOffset(), tag);
+    }
 }
 
 #define FIELD_GET(object, type) \

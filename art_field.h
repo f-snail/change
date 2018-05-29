@@ -90,20 +90,40 @@ class ArtField FINAL {
   void SetOffset(MemberOffset num_bytes) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_);
 
   // Taint begin
-  MemberOffset GetTaintOffset() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
-          DCHECK(GetDeclaringClass()->IsLoaded() || GetDeclaringClass()->IsErroneous());
-          return MemberOffset(offset_);
-  }
+  MemberOffset GetTaintOffset() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_);
 
   static MemberOffset TaintOffsetOffset() {
           return MemberOffset(OFFSETOF_MEMBER(ArtField, taint_offset_));
   }
 
-  void SetTaintOffset (MemberOffset num_bytes) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
-          DCHECK(GetDeclaringClass()->IsLoaded() || GetDeclaringClass()->IsErroneous());
+  void SetTaintOffset(uint32_t num_bytes) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
           taint_offset_ = num_bytes;
   }
   // Taint end
+
+  // Taint field access.
+  uint32_t GetTaint(mirror::Object* object) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_);
+
+  template<bool kTransactionActive>
+  void SetTaint(mirror::Object* object, uint32_t tag) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_);
+
+#define GetTaintBoolean(obj)  GetTaint(obj)
+#define GetTaintByte(obj)  GetTaint(obj)
+#define GetTaintChar(obj)  GetTaint(obj)
+#define GetTaintShort(obj)  GetTaint(obj)
+#define GetTaintInt(obj)  GetTaint(obj)
+#define GetTaintLong(obj)  GetTaint(obj)
+#define GetTaintFloat(obj)  GetTaint(obj)
+#define GetTaintDouble(obj)  GetTaint(obj)
+
+#define SetTaintBoolean(obj, tag_) SetTaint(obj, tag_)
+#define SetTaintByte(obj, tag_) SetTaint(obj, tag_)
+#define SetTaintChar(obj, tag_) SetTaint(obj, tag_)
+#define SetTaintShort(obj, tag_) SetTaint(obj, tag_)
+#define SetTaintInt(obj, tag_) SetTaint(obj, tag_)
+#define SetTaintLong(obj, tag_) SetTaint(obj, tag_)
+#define SetTaintFloat(obj, tag_) SetTaint(obj, tag_)
+#define SetTaintDouble(obj, tag_) SetTaint(obj, tag_)
 
   // field access, null object for static fields
   uint8_t GetBoolean(mirror::Object* object) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_);
@@ -229,7 +249,6 @@ class ArtField FINAL {
 
   // Taint: offset of taint field
   uint32_t taint_offset_;
-
 };
 
 }  // namespace art

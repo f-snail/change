@@ -21,7 +21,12 @@
 #include "gc/allocator_type.h"
 #include "object.h"
 #include "object_callbacks.h"
+
+#define TA64_TRACKING_STR
+
+#ifdef TA64_TRACKING_STR
 #include "Taint.h"
+#endif
 
 namespace art {
 
@@ -51,11 +56,11 @@ class MANAGED String FINAL : public Object {
   }
 
   // Taint begin
+#ifdef TA64_TRACKING_STR
   static MemberOffset TaintOffset() {
     return OFFSET_OF_OBJECT_MEMBER(String, taint);
   }
 
-  /* TODO: SetTaint() */
   void SetTaint(int32_t new_taint) SHARED_LOCKS_REQUIRED(Locks::mutator_lock_)  {
     SetField32<false, false>(OFFSET_OF_OBJECT_MEMBER(String, taint), new_taint);
   }
@@ -64,6 +69,7 @@ class MANAGED String FINAL : public Object {
   int32_t GetTaint() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
     return GetField32<kVerifyFlags>(OFFSET_OF_OBJECT_MEMBER(String, taint));
   }
+#endif
   // Taint end
 
   uint16_t* GetValue() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
@@ -191,12 +197,14 @@ class MANAGED String FINAL : public Object {
 
   uint32_t hash_code_;
 
+  // Taint
+#ifdef TA64_TRACKING_STR
+  Taint taint;
+#endif
+
   uint16_t value_[0];
 
   static GcRoot<Class> java_lang_String_;
-
-  // Taint
-  Taint taint;
 
   friend struct art::StringOffsets;  // for verifying offset information
   ART_FRIEND_TEST(ObjectTest, StringLength);  // for SetOffset and SetCount

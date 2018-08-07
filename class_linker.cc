@@ -81,6 +81,9 @@
 #include "verifier/method_verifier.h"
 #include "well_known_classes.h"
 
+// Taint
+// #define TA64_TRACKING_FIELD  /* TA64_TRACKING_LIN */
+
 namespace art {
 
 static constexpr bool kSanityCheckObjects = kIsDebugBuild;
@@ -230,6 +233,9 @@ static void ShuffleForward(size_t* current_field_idx,
   DCHECK(grouped_and_sorted_fields != nullptr);
   DCHECK(gaps != nullptr);
   DCHECK(field_offset != nullptr);
+
+  // TEST
+  // VLOG(TA64) << "The field being shuffled is " << current_field_idx;
 
   DCHECK(IsPowerOfTwo(n));
   while (!grouped_and_sorted_fields->empty()) {
@@ -457,6 +463,10 @@ void ClassLinker::InitWithoutImage(std::vector<std::unique_ptr<const DexFile>> b
   // Object, String and DexCache need to be rerun through FindSystemClass to finish init
   mirror::Class::SetStatus(java_lang_Object, mirror::Class::kStatusNotReady, self);
   CHECK_EQ(java_lang_Object.Get(), FindSystemClass(self, "Ljava/lang/Object;"));
+
+  // TEST
+  // VLOG(TA64) << "java_lang_Object->GetObjectSize() IS " << java_lang_Object->GetObjectSize() << " and mirror::Object::InstanceSize() IS" << mirror::Object::InstanceSize();
+
   CHECK_EQ(java_lang_Object->GetObjectSize(), mirror::Object::InstanceSize());
   mirror::Class::SetStatus(java_lang_String, mirror::Class::kStatusNotReady, self);
   mirror::Class* String_class = FindSystemClass(self, "Ljava/lang/String;");
@@ -1506,6 +1516,9 @@ mirror::Class* ClassLinker::AllocClass(Thread* self, mirror::Class* java_lang_Cl
                                        uint32_t class_size) {
   DCHECK_GE(class_size, sizeof(mirror::Class));
   gc::Heap* heap = Runtime::Current()->GetHeap();
+  // TEST
+  // VLOG(TA64) << "AllocClass: already Runtime::Current()->GetHeap();";
+
   mirror::Class::InitializeClassVisitor visitor(class_size);
   mirror::Object* k = kMovingClasses ?
       heap->AllocObject<true>(self, java_lang_Class, class_size, visitor) :
@@ -1579,6 +1592,8 @@ mirror::Class* ClassLinker::EnsureResolved(Thread* self, const char* descriptor,
   // Return the loaded class.  No exceptions should be pending.
   CHECK(klass->IsResolved()) << PrettyClass(klass);
   self->AssertNoPendingException();
+  // TEST
+  // VLOG(TA64) << "ClassLinker::EnsureResolved - complete, ready to return.";
   return klass;
 }
 
@@ -1724,12 +1739,17 @@ mirror::Class* ClassLinker::FindClass(Thread* self, const char* descriptor,
   if (descriptor[1] == '\0') {
     // only the descriptors of primitive types should be 1 character long, also avoid class lookup
     // for primitive classes that aren't backed by dex files.
+    // TEST
+       //   VLOG(TA64) << "FindClass: the descriptors is  primitive type.";
     return FindPrimitiveClass(descriptor[0]);
   }
   const size_t hash = ComputeModifiedUtf8Hash(descriptor);
   // Find the class in the loaded classes table.
   mirror::Class* klass = LookupClass(self, descriptor, hash, class_loader.Get());
+
   if (klass != nullptr) {
+          // TEST
+        // VLOG(TA64) << "FindClass - LookupClass already find the class, ready to return EnsureResolved(self, descriptor, klass)";
     return EnsureResolved(self, descriptor, klass);
   }
   // Class is not yet loaded.
@@ -1739,6 +1759,8 @@ mirror::Class* ClassLinker::FindClass(Thread* self, const char* descriptor,
     // The boot class loader, search the boot class path.
     ClassPathEntry pair = FindInClassPath(descriptor, hash, boot_class_path_);
     if (pair.second != nullptr) {
+            // TEST
+            // VLOG(TA64) << "FindClass: search the boot class path.";
       return DefineClass(self, descriptor, hash, NullHandle<mirror::ClassLoader>(), *pair.first,
                          *pair.second);
     } else {
@@ -1841,6 +1863,9 @@ mirror::Class* ClassLinker::DefineClass(Thread* self, const char* descriptor, si
   }
   klass->SetDexCache(FindDexCache(dex_file));
 
+  // TEST
+  // VLOG(TA64) << "DefineClass: is gonna call SetupClass";
+
   SetupClass(dex_file, dex_class_def, klass, class_loader.Get());
 
   // Mark the string class by setting its access flag.
@@ -1882,6 +1907,8 @@ mirror::Class* ClassLinker::DefineClass(Thread* self, const char* descriptor, si
     if (!klass->IsErroneous()) {
       mirror::Class::SetStatus(klass, mirror::Class::kStatusError, self);
     }
+    // TEST
+    // VLOG(TA64) << "DefineClass: LoadSuperAndInterfaces failed, ready to return nullptr.";
     return nullptr;
   }
   CHECK(klass->IsLoaded());
@@ -1896,6 +1923,8 @@ mirror::Class* ClassLinker::DefineClass(Thread* self, const char* descriptor, si
     if (!klass->IsErroneous()) {
       mirror::Class::SetStatus(klass, mirror::Class::kStatusError, self);
     }
+    // TEST
+    // VLOG(TA64) << "DefineClass: Linking(LinkClass) failed, ready to return nullptr.";
     return nullptr;
   }
   self->AssertNoPendingException();
@@ -1926,6 +1955,9 @@ mirror::Class* ClassLinker::DefineClass(Thread* self, const char* descriptor, si
    * at this point.
    */
   Dbg::PostClassPrepare(h_new_class.Get());
+
+  // TEST
+  // VLOG(TA64) << "Define Class: is gonna - return h_new_class.Get()";
 
   return h_new_class.Get();
 }
@@ -2289,6 +2321,9 @@ void ClassLinker::LoadClass(Thread* self, const DexFile& dex_file,
 ArtField* ClassLinker::AllocArtFieldArray(Thread* self, size_t length) {
   auto* const la = Runtime::Current()->GetLinearAlloc();
   auto* ptr = reinterpret_cast<ArtField*>(la->AllocArray<ArtField>(self, length));
+  // TEST
+  // VLOG(TA64) << "AllocArtFieldArray'size is " << length * sizeof(ArtField) << " and the ArtField's size is " << sizeof(ArtField);
+
   CHECK(ptr!= nullptr);
   std::uninitialized_fill_n(ptr, length, ArtField());
   return ptr;
@@ -5124,14 +5159,17 @@ bool ClassLinker::LinkFields(Thread* self, Handle<mirror::Class> klass, bool is_
                              size_t* class_size) {
   self->AllowThreadSuspension();
   const size_t num_fields = is_static ? klass->NumStaticFields() : klass->NumInstanceFields();
+
   ArtField* const fields = is_static ? klass->GetSFields() : klass->GetIFields();
+
+  mirror::Class* super_class = klass->GetSuperClass();
 
   // Initialize field_offset
   MemberOffset field_offset(0);
   if (is_static) {
     field_offset = klass->GetFirstReferenceStaticFieldOffsetDuringLinking(image_pointer_size_);
   } else {
-    mirror::Class* super_class = klass->GetSuperClass();
+    // mirror::Class* super_class = klass->GetSuperClass();
     if (super_class != nullptr) {
       CHECK(super_class->IsResolved())
           << PrettyClass(klass.Get()) << " " << PrettyClass(super_class);
@@ -5177,21 +5215,60 @@ bool ClassLinker::LinkFields(Thread* self, Handle<mirror::Class> klass, bool is_
     field_offset = MemberOffset(field_offset.Uint32Value() +
                                 sizeof(mirror::HeapReference<mirror::Object>));
   }
+
   // Gaps are stored as a max heap which means that we must shuffle from largest to smallest
   // otherwise we could end up with suboptimal gap fills.
+
   ShuffleForward<8>(&current_field, &field_offset, &grouped_and_sorted_fields, &gaps);
+
   ShuffleForward<4>(&current_field, &field_offset, &grouped_and_sorted_fields, &gaps);
 
+#ifdef TA64_TRACKING_FIELD
   // Taint: add taint tag after the 4-byte field area, because the taint tag is 4-byte too.
-  field_offset = MemberOffset(field_offset.Uint32Value() +
-                              num_fields * sizeof(int32_t);
-  // Taint end
+  int32_t n_offset;
+  n_offset = field_offset.Uint32Value();
+  if (is_static) {
+  field_offset = MemberOffset(field_offset.Uint32Value() + num_fields * sizeof(int32_t));
+  } else if (!is_static && super_class != nullptr) {
+          field_offset = MemberOffset(field_offset.Uint32Value() + num_fields * sizeof(int32_t));
+  }
+#endif
 
   ShuffleForward<2>(&current_field, &field_offset, &grouped_and_sorted_fields, &gaps);
   ShuffleForward<1>(&current_field, &field_offset, &grouped_and_sorted_fields, &gaps);
   CHECK(grouped_and_sorted_fields.empty()) << "Missed " << grouped_and_sorted_fields.size() <<
       " fields.";
   self->EndAssertNoThreadSuspension(old_no_suspend_cause);
+
+#ifdef TA64_TRACKING_FIELD
+  // Taint: put the taint_offset of ArtField into the right place
+  std::deque<ArtField*> t_fields;
+  for (size_t i = 0; i < num_fields; i++) {
+          t_fields.push_back(&fields[i]);
+  }
+  std::sort(t_fields.begin(), t_fields.end(), LinkFieldsComparator());
+  if (is_static) {
+          while (!t_fields.empty()) {
+                  ArtField* t_field = t_fields.front();
+                  t_field->SetTaintOffset(n_offset);
+                  t_fields.pop_front();
+                  n_offset += sizeof(int32_t);
+          }
+  } else if (!is_static && super_class != nullptr) {
+          while (!t_fields.empty()) {
+                  ArtField* t_field = t_fields.front();
+                  t_field->SetTaintOffset(n_offset);
+                  t_fields.pop_front();
+                  n_offset += sizeof(int32_t);
+          }
+  } else {  // Object need to pop the deque too.
+          while (!t_fields.empty()) {
+                  // ArtField* t_field = t_fields.front();  /* don't need this sentence. */
+                  t_fields.pop_front();
+          }
+  }
+#endif
+  // Taint end
 
   // We lie to the GC about the java.lang.ref.Reference.referent field, so it doesn't scan it.
   if (!is_static && klass->DescriptorEquals("Ljava/lang/ref/Reference;")) {
@@ -5203,16 +5280,20 @@ bool ClassLinker::LinkFields(Thread* self, Handle<mirror::Class> klass, bool is_
   }
 
   size_t size = field_offset.Uint32Value();
+
   // Update klass
   if (is_static) {
     klass->SetNumReferenceStaticFields(num_reference_fields);
     *class_size = size;
+
   } else {
     klass->SetNumReferenceInstanceFields(num_reference_fields);
+
     if (!klass->IsVariableSize()) {
       std::string temp;
       DCHECK_GE(size, sizeof(mirror::Object)) << klass->GetDescriptor(&temp);
       size_t previous_size = klass->GetObjectSize();
+
       if (previous_size != 0) {
         // Make sure that we didn't originally have an incorrect size.
         CHECK_EQ(previous_size, size) << klass->GetDescriptor(&temp);

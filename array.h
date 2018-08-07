@@ -21,7 +21,13 @@
 #include "gc/allocator_type.h"
 #include "object.h"
 #include "object_callbacks.h"
+
+// Taint
+#define TA64_TRACKING_ARR
+
+#ifdef TA64_TRACKING_ARR
 #include "Taint.h"
+#endif
 
 namespace art {
 
@@ -66,8 +72,11 @@ class MANAGED Array : public Object {
   }
 
   // Taint begin
+#ifdef TA64_TRACKING_ARR
   template<VerifyObjectFlags kVerifyFlags = kDefaultVerifyFlags>
   ALWAYS_INLINE int32_t GetTaint() SHARED_LOCKS_REQUIRED(Locks::mutator_lock_) {
+     // TEST
+     VLOG(TA64) << "The offset of taint in array is " << OFFSET_OF_OBJECT_MEMBER(Array, taint);
      return GetField32<kVerifyFlags>(OFFSET_OF_OBJECT_MEMBER(Array, taint));
   }
 
@@ -79,6 +88,7 @@ class MANAGED Array : public Object {
   static MemberOffset TaintOffset() {
      return OFFSET_OF_OBJECT_MEMBER(Array, taint);
   }
+#endif
   // Taint end
 
   static MemberOffset DataOffset(size_t component_size);
@@ -112,11 +122,15 @@ class MANAGED Array : public Object {
 
   // The number of array elements.
   int32_t length_;
+
+  // Taint begin
+#ifdef TA64_TRACKING_ARR
+  Taint taint;
+#endif
+  // Taint end
+
   // Marker for the data (used by generated code)
   uint32_t first_element_[0];
-  // Taint begin
-  Taint taint;
-  // Taint end
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(Array);
 };

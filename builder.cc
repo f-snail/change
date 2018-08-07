@@ -32,6 +32,9 @@
 #include "scoped_thread_state_change.h"
 #include "thread.h"
 
+// Taint
+// #define TA64_TRACKING_FIELD  /* TA64_TRACKING_BUILD */
+
 namespace art {
 
 /**
@@ -849,6 +852,7 @@ bool HGraphBuilder::BuildInstanceFieldAccess(const Instruction& instruction,
     // We need one temporary for the null check.
     temps.Add(null_check);
     HInstruction* value = LoadLocal(source_or_dest_reg, field_type);
+#ifdef TA64_TRACKING_FIELD
     current_block_->AddInstruction(new (arena_) HInstanceFieldSet(
         null_check,
         value,
@@ -857,7 +861,16 @@ bool HGraphBuilder::BuildInstanceFieldAccess(const Instruction& instruction,
         resolved_field->IsVolatile(),
         /*Taint*/
         resolved_field->GetTaintOffset()));
+#else
+    current_block_->AddInstruction(new (arena_) HInstanceFieldSet(
+                            null_check,
+                            value,
+                            field_type,
+                            resolved_field->GetOffset(),
+                            resolved_field->IsVolatile()));
+#endif
   } else {
+#ifdef TA64_TRACKING_FIELD
     current_block_->AddInstruction(new (arena_) HInstanceFieldGet(
         current_block_->GetLastInstruction(),
         field_type,
@@ -865,6 +878,13 @@ bool HGraphBuilder::BuildInstanceFieldAccess(const Instruction& instruction,
         resolved_field->IsVolatile(),
         /*Taint*/
         resolved_field->GetTaintOffset()));
+#else
+    current_block_->AddInstruction(new (arena_) HInstanceFieldGet(
+                            current_block_->GetLastInstruction(),
+                            field_type,
+                            resolved_field->GetOffset(),
+                            resolved_field->IsVolatile()));
+#endif
 
     UpdateLocal(source_or_dest_reg, current_block_->GetLastInstruction());
   }
@@ -973,17 +993,29 @@ bool HGraphBuilder::BuildStaticFieldAccess(const Instruction& instruction,
     temps.Add(cls);
     HInstruction* value = LoadLocal(source_or_dest_reg, field_type);
     DCHECK_EQ(value->GetType(), field_type);
+#ifdef TA64_TRACKING_FIELD
     current_block_->AddInstruction(
         new (arena_) HStaticFieldSet(cls, value, field_type, resolved_field->GetOffset(),
             resolved_field->IsVolatile(),
             /*Taint*/
             resolved_field->GetTaintOffset()));
+#else
+    current_block_->AddInstruction(
+                    new (arena_) HStaticFieldSet(cls, value, field_type, resolved_field->GetOffset(),
+                            resolved_field->IsVolatile()));
+#endif
   } else {
+#ifdef TA64_TRACKING_FIELD
     current_block_->AddInstruction(
         new (arena_) HStaticFieldGet(cls, field_type, resolved_field->GetOffset(),
             resolved_field->IsVolatile(),
             /*Taint*/
             resolved_field->GetTaintOffset()));
+#else
+    current_block_->AddInstruction(
+                    new (arena_) HStaticFieldGet(cls, field_type, resolved_field->GetOffset(),
+                            resolved_field->IsVolatile()));
+#endif
     UpdateLocal(source_or_dest_reg, current_block_->GetLastInstruction());
   }
   return true;

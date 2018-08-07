@@ -31,6 +31,8 @@
 #include "utils/arena_bit_vector.h"
 #include "utils/growable_array.h"
 
+#define TA64_TRACKING_FIELD  /* TA64_TRACKING_NODE */
+
 namespace art {
 
 class GraphChecker;
@@ -3129,27 +3131,35 @@ class HNullCheck : public HExpression<1> {
 class FieldInfo : public ValueObject {
  public:
   // Taint
-  // FieldInfo(MemberOffset field_offset, Primitive::Type field_type, bool is_volatile)
-  //      : field_offset_(field_offset), field_type_(field_type), is_volatile_(is_volatile) {}
+#ifdef TA64_TRACKING_FIELD
   FieldInfo(MemberOffset field_offset, Primitive::Type field_type, bool is_volatile, MemberOffset taint_offset)
-      : field_offset_(field_offset), field_type_(field_type), is_volatile_(is_volatile), taint_offset_(taint_offset) {}
+          : field_offset_(field_offset), field_type_(field_type), is_volatile_(is_volatile), taint_offset_(taint_offset) {}
+#else
+  FieldInfo(MemberOffset field_offset, Primitive::Type field_type, bool is_volatile)
+        : field_offset_(field_offset), field_type_(field_type), is_volatile_(is_volatile) {}
+#endif
 
   MemberOffset GetFieldOffset() const { return field_offset_; }
   Primitive::Type GetFieldType() const { return field_type_; }
   bool IsVolatile() const { return is_volatile_; }
   // Taint
+#ifdef TA64_TRACKING_FIELD
   MemberOffset GetTaintOffset() const { return taint_offset_; }
+#endif
 
  private:
   const MemberOffset field_offset_;
   const Primitive::Type field_type_;
   const bool is_volatile_;
   // Taint
+#ifdef TA64_TRACKING_FIELD
   const MemberOffset taint_offset_;
+#endif
 };
 
 class HInstanceFieldGet : public HExpression<1> {
  public:
+#ifdef TA64_TRACKING_FIELD
   HInstanceFieldGet(HInstruction* value,
                     Primitive::Type field_type,
                     MemberOffset field_offset,
@@ -3157,11 +3167,22 @@ class HInstanceFieldGet : public HExpression<1> {
                     /*Taint*/
                     MemberOffset taint_offset)
       : HExpression(field_type, SideEffects::DependsOnSomething()),
-        /* Taint 
-        field_info_(field_offset, field_type, is_volatile) { */
         field_info_(field_offset, field_type, is_volatile, taint_offset) {
+        /* Taint
+         field_info_(field_offset, field_type, is_volatile) { */
     SetRawInputAt(0, value);
   }
+#else
+  HInstanceFieldGet(HInstruction* value,
+                  Primitive::Type field_type,
+                  MemberOffset field_offset,
+                  bool is_volatile)
+          : HExpression(field_type, SideEffects::DependsOnSomething()),
+          field_info_(field_offset, field_type, is_volatile) {
+                  SetRawInputAt(0, value);
+          }
+#endif
+
 
   bool CanBeMoved() const OVERRIDE { return !IsVolatile(); }
 
@@ -3184,7 +3205,9 @@ class HInstanceFieldGet : public HExpression<1> {
   bool IsVolatile() const { return field_info_.IsVolatile(); }
 
   // Taint
+#ifdef TA64_TRACKING_FIELD
   MemberOffset GetTaintOffset() const { return field_info_.GetTaintOffset(); }
+#endif
 
   DECLARE_INSTRUCTION(InstanceFieldGet);
 
@@ -3196,6 +3219,7 @@ class HInstanceFieldGet : public HExpression<1> {
 
 class HInstanceFieldSet : public HTemplateInstruction<2> {
  public:
+#ifdef TA64_TRACKING_FIELD
   HInstanceFieldSet(HInstruction* object,
                     HInstruction* value,
                     Primitive::Type field_type,
@@ -3210,7 +3234,18 @@ class HInstanceFieldSet : public HTemplateInstruction<2> {
     SetRawInputAt(0, object);
     SetRawInputAt(1, value);
   }
-
+#else
+  HInstanceFieldSet(HInstruction* object,
+                  HInstruction* value,
+                  Primitive::Type field_type,
+                  MemberOffset field_offset,
+                  bool is_volatile)
+          : HTemplateInstruction(SideEffects::ChangesSomething()),
+          field_info_(field_offset, field_type, is_volatile) {
+                  SetRawInputAt(0, object);
+                  SetRawInputAt(1, value);
+          }
+#endif
   bool CanDoImplicitNullCheckOn(HInstruction* obj) const OVERRIDE {
     return (obj == InputAt(0)) && GetFieldOffset().Uint32Value() < kPageSize;
   }
@@ -3222,7 +3257,9 @@ class HInstanceFieldSet : public HTemplateInstruction<2> {
   HInstruction* GetValue() const { return InputAt(1); }
 
   // Taint
+#ifdef TA64_TRACKING_FIELD
   MemberOffset GetTaintOffset() const { return field_info_.GetTaintOffset(); }
+#endif
 
   DECLARE_INSTRUCTION(InstanceFieldSet);
 
@@ -3582,6 +3619,7 @@ class HClinitCheck : public HExpression<1> {
 
 class HStaticFieldGet : public HExpression<1> {
  public:
+#ifdef TA64_TRACKING_FIELD
   HStaticFieldGet(HInstruction* cls,
                   Primitive::Type field_type,
                   MemberOffset field_offset,
@@ -3594,7 +3632,16 @@ class HStaticFieldGet : public HExpression<1> {
         field_info_(field_offset, field_type, is_volatile, taint_offset) {
     SetRawInputAt(0, cls);
   }
-
+#else
+  HStaticFieldGet(HInstruction* cls,
+                  Primitive::Type field_type,
+                  MemberOffset field_offset,
+                  bool is_volatile)
+          : HExpression(field_type, SideEffects::DependsOnSomething()),
+          field_info_(field_offset, field_type, is_volatile) {
+                  SetRawInputAt(0, cls);
+          }
+#endif
 
   bool CanBeMoved() const OVERRIDE { return !IsVolatile(); }
 
@@ -3613,7 +3660,9 @@ class HStaticFieldGet : public HExpression<1> {
   bool IsVolatile() const { return field_info_.IsVolatile(); }
 
   // Taint
+#ifdef TA64_TRACKING_FIELD
   MemberOffset GetTaintOffset() const { return field_info_.GetTaintOffset(); }
+#endif
 
   DECLARE_INSTRUCTION(StaticFieldGet);
 
@@ -3625,6 +3674,7 @@ class HStaticFieldGet : public HExpression<1> {
 
 class HStaticFieldSet : public HTemplateInstruction<2> {
  public:
+#ifdef TA64_TRACKING_FIELD
   HStaticFieldSet(HInstruction* cls,
                   HInstruction* value,
                   Primitive::Type field_type,
@@ -3633,12 +3683,24 @@ class HStaticFieldSet : public HTemplateInstruction<2> {
                   /*Taint*/
                   MemberOffset taint_offset)
       : HTemplateInstruction(SideEffects::ChangesSomething()),
+        field_info_(field_offset, field_type, is_volatile, taint_offset) {
         /* Taint
         field_info_(field_offset, field_type, is_volatile) { */
-        field_info_(field_offset, field_type, is_volatile, taint_offset) {
     SetRawInputAt(0, cls);
     SetRawInputAt(1, value);
   }
+#else
+  HStaticFieldSet(HInstruction* cls,
+                  HInstruction* value,
+                  Primitive::Type field_type,
+                  MemberOffset field_offset,
+                  bool is_volatile)
+          : HTemplateInstruction(SideEffects::ChangesSomething()),
+          field_info_(field_offset, field_type, is_volatile) {
+                  SetRawInputAt(0, cls);
+                  SetRawInputAt(1, value);
+          }
+#endif
 
   const FieldInfo& GetFieldInfo() const { return field_info_; }
   MemberOffset GetFieldOffset() const { return field_info_.GetFieldOffset(); }
@@ -3646,7 +3708,9 @@ class HStaticFieldSet : public HTemplateInstruction<2> {
   bool IsVolatile() const { return field_info_.IsVolatile(); }
 
   // Taint
+#ifdef TA64_TRACKING_FIELD
   MemberOffset GetTaintOffset() const { return field_info_.GetTaintOffset(); }
+#endif
 
   HInstruction* GetValue() const { return InputAt(1); }
 
@@ -4185,7 +4249,6 @@ inline int64_t Int64FromConstant(HConstant* constant) {
   return constant->IsIntConstant() ? constant->AsIntConstant()->GetValue()
                                    : constant->AsLongConstant()->GetValue();
 }
-
 }  // namespace art
 
 #endif  // ART_COMPILER_OPTIMIZING_NODES_H_
